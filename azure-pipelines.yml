@@ -1,5 +1,6 @@
 # https://aka.ms/yaml
 
+# Only for coverage!
 trigger:
   paths:
     include:
