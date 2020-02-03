@@ -27,6 +27,8 @@ public:
     // Remove all keys in the range [start, end)
     virtual ResultCode removeRange(folly::StringPiece start,
                                    folly::StringPiece end) = 0;
+
+    virtual ResultCode merge(folly::StringPiece key, folly::StringPiece value) = 0;
 };
 
 

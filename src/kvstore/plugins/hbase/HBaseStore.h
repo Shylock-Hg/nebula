@@ -139,6 +139,10 @@ public:
                        KVCallback) override {
         LOG(FATAL) << "Not supportted yet!";
     }
+    void asyncMerge(nebula::GraphSpaceID, nebula::PartitionID, const std::string&,
+        const std::string&, nebula::kvstore::KVCallback) override {
+        LOG(FATAL) << "Not supportted yet!";
+    }
 
     ResultCode ingest(GraphSpaceID spaceId) override;
 

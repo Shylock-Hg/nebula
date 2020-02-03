@@ -77,6 +77,17 @@ void Part::asyncMultiPut(const std::vector<KV>& keyValues, KVCallback cb) {
         });
 }
 
+void Part::asyncMerge(const folly::StringPiece key, const folly::StringPiece value, KVCallback cb) {
+    std::string log = encodeMultiValues(OP_MERGE, key, value);
+    appendAsync(FLAGS_cluster_id, std::move(log))
+        .thenValue([this, callback = std::move(cb)] (AppendLogResult res) mutable {
+            callback(this->toResultCode(res));
+        })
+        .thenError([callback = std::move(cb)](auto &&e) mutable {
+            LOG(ERROR) << e.what();
+            callback(ResultCode::ERR_UNKNOWN);
+        });
+}
 
 void Part::asyncRemove(folly::StringPiece key, KVCallback cb) {
     std::string log = encodeSingleValue(OP_REMOVE, key);
@@ -305,6 +316,15 @@ bool Part::commitLogs(std::unique_ptr<LogIterator> iter) {
                 commitRemovePeer(peer);
             } else {
                 LOG(INFO) << idStr_ << "Skip commit stale remove peer " << peer;
+            }
+            break;
+        }
+        case OP_MERGE: {
+            auto pieces = decodeMultiValues(log);
+            DCHECK_EQ(2, pieces.size());
+            if (batch->merge(pieces[0], pieces[1]) != ResultCode::SUCCEEDED) {
+                LOG(ERROR) << idStr_ << "Failed to call WriteBatch::merge(key, value)";
+                return false;
             }
             break;
         }

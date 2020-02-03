@@ -78,6 +78,14 @@ public:
         }
     }
 
+    ResultCode merge(folly::StringPiece key, folly::StringPiece value) override {
+        if (batch_.Merge(toSlice(key), toSlice(value)).ok()) {
+            return ResultCode::SUCCEEDED;
+        } else {
+            return ResultCode::ERR_UNKNOWN;
+        }
+    }
+
     rocksdb::WriteBatch* data() {
         return &batch_;
     }

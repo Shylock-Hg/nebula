@@ -43,6 +43,9 @@ public:
     void asyncPut(folly::StringPiece key, folly::StringPiece value, KVCallback cb);
     void asyncMultiPut(const std::vector<KV>& keyValues, KVCallback cb);
 
+    // Merge Operation based on RocksDB
+    void asyncMerge(const folly::StringPiece key, const folly::StringPiece value, KVCallback cb);
+
     void asyncRemove(folly::StringPiece key, KVCallback cb);
     void asyncMultiRemove(const std::vector<std::string>& keys, KVCallback cb);
     void asyncRemovePrefix(folly::StringPiece prefix, KVCallback cb);

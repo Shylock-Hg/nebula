@@ -157,6 +157,9 @@ public:
                                raftex::AtomicOp op,
                                KVCallback cb) = 0;
 
+    virtual void asyncMerge(GraphSpaceID spaceId, PartitionID partId, const std::string& key,
+        const std::string& value, KVCallback cb) = 0;
+
     virtual ResultCode ingest(GraphSpaceID spaceId) = 0;
 
     virtual int32_t allLeader(std::unordered_map<GraphSpaceID,

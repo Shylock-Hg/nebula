@@ -508,6 +508,18 @@ void NebulaStore::asyncAtomicOp(GraphSpaceID spaceId,
     part->asyncAtomicOp(std::move(op), std::move(cb));
 }
 
+void NebulaStore::asyncMerge(GraphSpaceID spaceId, PartitionID partId,
+    const std::string& key, const std::string& value,
+    KVCallback cb) {
+    auto ret = part(spaceId, partId);
+    if (!ok(ret)) {
+        cb(error(ret));
+        return;
+    }
+    auto part = nebula::value(ret);
+    part->asyncMerge(key, value, std::move(cb));
+}
+
 ErrorOr<ResultCode, std::shared_ptr<Part>> NebulaStore::part(GraphSpaceID spaceId,
                                                              PartitionID partId) {
     folly::RWSpinLock::ReadHolder rh(&lock_);
@@ -785,6 +797,26 @@ bool NebulaStore::checkLeader(std::shared_ptr<Part> part) const {
     return !FLAGS_check_leader || part->isLeader();
 }
 
+bool NebulaStore::MergeAddOperator::Merge(const rocksdb::Slice& key,
+            const rocksdb::Slice* existingValue,
+            const rocksdb::Slice& value,
+            std::string* newValue,
+            rocksdb::Logger* logger) const {
+    UNUSED(key);
+    UNUSED(logger);
+    DCHECK(DCHECK_NOTNULL(newValue)->empty());
+    TagID newNum = 1;
+    if (existingValue != nullptr) {
+        // TODO(shylock) Exception?
+        newNum = folly::to<int32_t>(existingValue->data()) + folly::to<int32_t>(value.data());
+    }
+    *newValue = std::string(reinterpret_cast<char*>(&newNum), sizeof(newNum));
+    return true;
+}
+
+const char* NebulaStore::MergeAddOperator::Name() const {
+    return "MergeAddOperator";
+}
 
 }  // namespace kvstore
 }  // namespace nebula

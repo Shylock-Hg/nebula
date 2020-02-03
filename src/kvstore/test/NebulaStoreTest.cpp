@@ -926,6 +926,66 @@ TEST(NebulaStoreTest, AtomicOpBatchTest) {
         EXPECT_EQ(expected, result);
     }
 }
+
+TEST(NebulaStoreTest, MergeTest) {
+    auto partMan = std::make_unique<MemPartManager>();
+    auto ioThreadPool = std::make_shared<folly::IOThreadPoolExecutor>(4);
+    // GraphSpaceID =>  {PartitionIDs}
+    // 1 => {0, 1, 2, 3, 4, 5}
+    // 2 => {0, 1, 2, 3, 4, 5}
+    for (auto spaceId = 1; spaceId <=2; spaceId++) {
+        for (auto partId = 0; partId < 6; partId++) {
+            partMan->partsMap_[spaceId][partId] = PartMeta();
+        }
+    }
+
+    VLOG(1) << "Total space num is " << partMan->partsMap_.size()
+            << ", total local partitions num is "
+            << partMan->parts(HostAddr(0, 0)).size();
+
+    fs::TempDir rootPath("/tmp/nebula_store_test.XXXXXX");
+    std::vector<std::string> paths;
+    paths.emplace_back(folly::stringPrintf("%s/disk1", rootPath.path()));
+    paths.emplace_back(folly::stringPrintf("%s/disk2", rootPath.path()));
+
+    KVOptions options;
+    options.dataPaths_ = std::move(paths);
+    options.partMan_ = std::move(partMan);
+    options.mergeOp_.reset(new NebulaStore::MergeAddOperator());
+    HostAddr local = {0, 0};
+    auto store = std::make_unique<NebulaStore>(std::move(options),
+                                               ioThreadPool,
+                                               local,
+                                               getHandlers());
+    store->init();
+    sleep(1);
+    EXPECT_EQ(2, store->spaces_.size());
+
+    EXPECT_EQ(6, store->spaces_[1]->parts_.size());
+    EXPECT_EQ(2, store->spaces_[1]->engines_.size());
+    EXPECT_EQ(folly::stringPrintf("%s/disk1/nebula/1", rootPath.path()),
+              store->spaces_[1]->engines_[0]->getDataRoot());
+    EXPECT_EQ(folly::stringPrintf("%s/disk2/nebula/1", rootPath.path()),
+              store->spaces_[1]->engines_[1]->getDataRoot());
+
+    EXPECT_EQ(6, store->spaces_[2]->parts_.size());
+    EXPECT_EQ(2, store->spaces_[2]->engines_.size());
+    EXPECT_EQ(folly::stringPrintf("%s/disk1/nebula/2", rootPath.path()),
+              store->spaces_[2]->engines_[0]->getDataRoot());
+    EXPECT_EQ(folly::stringPrintf("%s/disk2/nebula/2", rootPath.path()),
+              store->spaces_[2]->engines_[1]->getDataRoot());
+
+    store->asyncMerge(1, 1, "key", "1", [](ResultCode code) {
+        EXPECT_EQ(ResultCode::SUCCEEDED, code);
+    });
+
+    store->asyncMerge(2, 4, "key2", "2", [](ResultCode code) {
+        EXPECT_EQ(ResultCode::SUCCEEDED, code);
+    });
+
+    VLOG(1) << "Put some data then read them...";
+}
+
 }  // namespace kvstore
 }  // namespace nebula
 

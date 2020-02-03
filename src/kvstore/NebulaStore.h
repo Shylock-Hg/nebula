@@ -38,6 +38,7 @@ class NebulaStore : public KVStore, public Handler {
     FRIEND_TEST(NebulaStoreTest, TransLeaderTest);
     FRIEND_TEST(NebulaStoreTest, CheckpointTest);
     FRIEND_TEST(NebulaStoreTest, ThreeCopiesCheckpointTest);
+    FRIEND_TEST(NebulaStoreTest, MergeTest);
 
 public:
     NebulaStore(KVOptions options,
@@ -176,6 +177,9 @@ public:
                        raftex::AtomicOp op,
                        KVCallback cb) override;
 
+    void asyncMerge(GraphSpaceID spaceId, PartitionID partId, const std::string& key,
+        const std::string& value, KVCallback cb) override;
+
     ErrorOr<ResultCode, std::shared_ptr<Part>> part(GraphSpaceID spaceId,
                                                     PartitionID partId) override;
 
@@ -216,6 +220,16 @@ public:
 
     int32_t allLeader(std::unordered_map<GraphSpaceID,
                                          std::vector<PartitionID>>& leaderIds) override;
+
+    class MergeAddOperator : public rocksdb::AssociativeMergeOperator {
+        bool Merge(const rocksdb::Slice& key,
+                    const rocksdb::Slice* existingValue,
+                    const rocksdb::Slice& value,
+                    std::string* newValue,
+                    rocksdb::Logger* logger) const override;
+        const char* Name() const override;
+    };
+
 
 private:
     void updateSpaceOption(GraphSpaceID spaceId,
