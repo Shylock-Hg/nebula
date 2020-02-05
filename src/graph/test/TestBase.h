@@ -105,7 +105,7 @@ protected:
     /**
      * Convert `ColumnValue' to its cooresponding type
      */
-    template <typename T>
+    template <typename T, bool isDefault = false>
     std::enable_if_t<std::is_integral<T>::value, T>
     convert(const cpp2::ColumnValue &v) {
         switch (v.getType()) {
@@ -118,26 +118,34 @@ protected:
             case ColumnType::bool_val:
                 return v.get_bool_val();
             default:
-                throw TestError() << "Cannot convert unknown dynamic column type to integer: "
-                                  << static_cast<int32_t>(v.getType());
+                if (isDefault) {
+                    return T();
+                } else {
+                    throw TestError() << "Cannot convert unknown dynamic column type to integer: "
+                                    << static_cast<int32_t>(v.getType());
+                }
         }
         return T();     // suppress the no-return waring
     }
 
-    template <typename T>
+    template <typename T, bool idDefault = false>
     std::enable_if_t<std::is_same<T, std::string>::value, T>
     convert(const cpp2::ColumnValue &v) {
         switch (v.getType()) {
             case ColumnType::str:
                 return v.get_str();
             default:
-                throw TestError() << "Cannot convert unknown dynamic column type to string: "
-                                  << static_cast<int32_t>(v.getType());
+                if (idDefault) {
+                    return T();
+                } else {
+                    throw TestError() << "Cannot convert unknown dynamic column type to string: "
+                                    << static_cast<int32_t>(v.getType());
+                }
         }
         return T();     // suppress the no-return warning
     }
 
-    template <typename T>
+    template <typename T, bool isDefault = false>
     std::enable_if_t<std::is_floating_point<T>::value, T>
     convert(const cpp2::ColumnValue &v) {
         switch (v.getType()) {
@@ -146,9 +154,13 @@ protected:
             case ColumnType::double_precision:
                 return v.get_double_precision();
             default:
-                throw TestError() << "Cannot convert unknown dynamic column type to "
-                                  << "floating point type: "
-                                  << static_cast<int32_t>(v.getType());
+                if (isDefault) {
+                    return T();
+                } else {
+                    throw TestError() << "Cannot convert unknown dynamic column type to "
+                                    << "floating point type: "
+                                    << static_cast<int32_t>(v.getType());
+                }
         }
         return T();     // suppress the no-return warning
     }
@@ -167,6 +179,20 @@ protected:
         return rowToTupleImpl<Tuple>(row, std::make_index_sequence<tupleSize>());
     }
 
+    /**
+     * Transform rows of dynamic type to tuples of static type
+     */
+    template <typename Tuple, size_t...Is>
+    auto rowToTupleWithHoleImpl(const Row &row, std::index_sequence<Is...>) {
+        return std::make_tuple(convert<folly::Optional<std::tuple_element_t<Is, Tuple>>, true>(row[Is])...);
+    }
+
+    template <typename Tuple>
+    auto rowToTupleWithHole(const Row &row) {
+        constexpr auto tupleSize = std::tuple_size<Tuple>::value;
+        return rowToTupleWithHoleImpl<Tuple>(row, std::make_index_sequence<tupleSize>());
+    }
+
     template <typename Tuple>
     auto rowsToTuples(const Rows &rows) {
         std::vector<Tuple> result;
@@ -180,6 +206,23 @@ protected:
         }
         for (auto &row : rows) {
             result.emplace_back(rowToTuple<Tuple>(row));
+        }
+        return result;
+    }
+
+    template <typename Tuple>
+    auto rowsToTuplesWithHole(const Rows &rows) {
+        std::vector<Tuple> result;
+        if (rows.empty()) {
+            return result;
+        }
+        if (rows.back().size() != std::tuple_size<Tuple>::value) {
+            throw TestError() << "Column count not match: "
+                              << rows.back().size() << " vs. "
+                              << std::tuple_size<Tuple>::value;
+        }
+        for (auto &row : rows) {
+            result.emplace_back(rowToTupleWithHole<Tuple>(row));
         }
         return result;
     }
@@ -225,6 +268,80 @@ protected:
         for (decltype(rows.size()) i = 0; i < rows.size(); ++i) {
             if (rows[i] != expected[i]) {
                 return TestError() << rows[i] << " vs. " << expected[i];
+            }
+        }
+        return TestOK();
+    }
+
+    //template<typename>
+    //struct WrappedTupleImpl;
+
+    template<template<typename e> class Wrap, typename... T>
+    struct WrappedTupleImpl {
+        using type = std::tuple<Wrap<T>...>;
+    };
+
+    //template<typename, typename>
+    //struct WrappedTuple;
+
+    template<template<typename e> class Wrap, typename Tuple>
+    struct WrappedTuple {
+//        constexpr auto TupleSize = std::tuple_size<Tuple>::value;
+//        using type = OptionalTupleImpl<std::tuple_element_t<>
+//        using type = std::tuple<folly::Optional<std::tuple_element_t<std::make_index_sequence(std::tuple_size<Tuple>::value), Tuple>...>;
+        using type = typename WrappedTupleImpl<Wrap, Tuple>::type;
+    };
+
+    // To verify response which lack the value in table
+    template <typename Tuple>
+    AssertionResult verifyResultWithHole(const cpp2::ExecutionResponse &resp,
+                                 std::vector<Tuple> &expected,
+                                 bool sortEnable = true,
+                                 std::unordered_set<uint16_t> ignoreColIndex = {}) {
+        if (resp.get_error_code() != cpp2::ErrorCode::SUCCEEDED) {
+            auto *errmsg = resp.get_error_msg();
+            return TestError() << "Query failed with `"
+                               << static_cast<int32_t>(resp.get_error_code())
+                               << (errmsg == nullptr ? "'" : "': " + *errmsg);
+        }
+
+        if (resp.get_rows() == nullptr && expected.empty()) {
+            return TestOK();
+        }
+
+        using OptionalTuple = typename WrappedTuple<folly::Optional, Tuple>::type;
+        std::vector<OptionalTuple> rows;
+        try {
+            rows = rowsToTuplesWithHole<OptionalTuple>(respToRecords(resp, std::move(ignoreColIndex)));
+        } catch (const AssertionResult &e) {
+            return e;
+        } catch (const std::exception &e) {
+            return TestError() << "Unknown exception thrown: " << e.what();
+        }
+
+        if (expected.size() != rows.size()) {
+            return TestError() << "Rows' count not match: "
+                               << rows.size() << " vs. " << expected.size();
+        }
+
+        if (expected.empty()) {
+            return TestOK();
+        }
+
+        if (sortEnable) {
+            std::sort(rows.begin(), rows.end());
+            std::sort(expected.begin(), expected.end());
+        }
+        for (decltype(rows.size()) i = 0; i < rows.size(); ++i) {
+            //if (rows[i] != expected[i]) {
+                //return TestError() << rows[i] << " vs. " << expected[i];
+            //}
+            for (std::size_t j = 0; j < std::tuple_size<Tuple>::value; ++j) {
+                if (std::get<j>(rows[i])) {
+                    if (std::get<j>(rows[i]) != std::get<j>(expected[i])) {
+                        return TestError() << std::get<j>(rows[i]) << " vs. " << std::get<j>(expected[i]);
+                    }
+                }
             }
         }
         return TestOK();

@@ -17,6 +17,10 @@ namespace graph {
 
 class SchemaTest : public TestBase {
 protected:
+    // Field Type Null Key Default Extra
+    using SchemaHeaderTuple = std::tuple<std::string, std::string, bool,
+        std::string, std::string, std::string>;
+
     void SetUp() override {
         TestBase::SetUp();
         // ...
@@ -258,11 +262,12 @@ TEST_F(SchemaTest, metaCommunication) {
         cpp2::ExecutionResponse resp;
         std::string query = "DESCRIBE TAG tag1";
         client->execute(query, resp);
-        std::vector<uniform_tuple_t<std::string, 2>> expected{
-                {"id", "int"},
-                {"name", "string"},
+        std::vector<SchemaHeaderTuple> expected{
+                // Field      Type Null Key Default Extra
+                {  "id",    "int", "",  "",     "",    ""},
+                {"name", "string", "",  "",     "",    ""},
         };
-        ASSERT_TRUE(verifyResult(resp, expected));
+        ASSERT_TRUE(verifyResultWithHole(resp, expected));
     }
     // Test create tag succeeded
     {
@@ -291,14 +296,15 @@ TEST_F(SchemaTest, metaCommunication) {
         std::string query = "DESCRIBE TAG person";
         auto code = client->execute(query, resp);
         ASSERT_EQ(cpp2::ErrorCode::SUCCEEDED, code);
-        std::vector<uniform_tuple_t<std::string, 2>> expected{
-            {"name", "string"},
-            {"email", "string"},
-            {"age", "int"},
-            {"gender", "string"},
-            {"row_timestamp", "timestamp"},
+        std::vector<SchemaHeaderTuple> expected{
+            // Field      Type Null Key Default Extra
+            {"name", "string", "", "", "", ""},
+            {"email", "string", "", "", "", ""},
+            {"age", "int", "", "", "", ""},
+            {"gender", "string", "", "", "", ""},
+            {"row_timestamp", "timestamp", "", "", "", ""},
         };
-        ASSERT_TRUE(verifyResult(resp, expected));
+        ASSERT_TRUE(verifyResultWithHole(resp, expected));
     }
     // Test desc tag command
     {

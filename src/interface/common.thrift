@@ -73,10 +73,18 @@ union Value {
     5: i64     timestamp;
 }
 
+enum KeyType {
+    PRI = 0,
+    UNI = 1,
+    MUL = 2,
+} (cpp.enum_strict)
+
 struct ColumnDef {
     1: required string name,
     2: required ValueType type,
     3: optional Value default_value,
+    4: optional bool could_null,
+    5: optional KeyType key_type,
 }
 
 struct SchemaProp {
