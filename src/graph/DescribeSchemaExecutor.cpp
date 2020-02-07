@@ -9,28 +9,35 @@
 namespace nebula {
 namespace graph {
 
-/*static*/ std::string DescribeSchemaExecutor::value2String(const ::nebula::cpp2::Value& value) {
+/*static*/ void DescribeSchemaExecutor::setColumnValue(cpp2::ColumnValue& col,
+    const ::nebula::cpp2::Value& value) {
     switch (value.getType()) {
         case ::nebula::cpp2::Value::Type::bool_value: {
-            return std::to_string(value.get_bool_value());
+            col.set_bool_val(value.get_bool_value());
+            break;
         }
         case ::nebula::cpp2::Value::Type::int_value: {
-            return std::to_string(value.get_int_value());
+            col.set_integer(value.get_int_value());
+            break;
         }
         case ::nebula::cpp2::Value::Type::double_value: {
-            return std::to_string(value.get_double_value());
+            col.set_double_precision(value.get_double_value());
+            break;
         }
         case ::nebula::cpp2::Value::Type::string_value: {
-            return value.get_string_value();
+            col.set_str(value.get_string_value());
+            break;
         }
         case ::nebula::cpp2::Value::Type::timestamp: {
-            return std::to_string(value.get_timestamp());
+            col.set_timestamp(value.get_timestamp());
+            break;
         }
         case ::nebula::cpp2::Value::Type::__EMPTY__: {
-            return std::string();
+            // TODO Default NULL if NULL type introduced
+            col.set_str("NULL");
+            break;
         }
     }
-    return std::string();
 }
 
 /*static*/ std::vector<cpp2::RowValue> DescribeSchemaExecutor::genRows(
@@ -45,10 +52,10 @@ namespace graph {
         row[1].set_str(valueTypeToString(item.type));
         // Null
         if (item.get_could_null() != nullptr) {
-            row[2].set_str(*item.get_could_null() ? "True" : "False");
+            row[2].set_bool_val(*item.get_could_null());
         } else {
             // For testing checking with one value
-            row[2].set_str(std::string());
+            row[2].set_bool_val(false);
         }
         // Key
         if (item.get_key_type() != nullptr) {
@@ -60,13 +67,12 @@ namespace graph {
             row[3].set_str(std::string());
         }
         // Default
+        // TODO now the console require column has same type
         if (item.get_default_value() != nullptr) {
-            // covert to characters for the column require same type for testing checking
-            row[4].set_str(value2String(*item.get_default_value()));
+            setColumnValue(row[4], *item.get_default_value());
         } else {
-            // For testing checking with one value
-            // TODO Default NULL if NULL introduced
-            row[4].set_str(std::string());
+            // TODO Default NULL if NULL type introduced
+            row[4].set_str("NULL");
         }
         // Extra TODO(shylock) reserved now
         row[5].set_str(std::string());

@@ -30,8 +30,7 @@ protected:
         return "";
     }
 
-    // convert nebula value to string
-    static std::string value2String(const ::nebula::cpp2::Value& value);
+    static void setColumnValue(cpp2::ColumnValue& col, const ::nebula::cpp2::Value& value);
 
     static std::vector<cpp2::RowValue> genRows(const std::vector<::nebula::cpp2::ColumnDef>& cols);
 
