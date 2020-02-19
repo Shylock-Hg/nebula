@@ -737,6 +737,112 @@ TEST_F(YieldTest, EmptyInput) {
         ASSERT_TRUE(verifyResult(resp, expected));
     }
 }
+
+TEST_F(YieldTest, BitOperator) {
+    // BIT_AND
+    {
+        cpp2::ExecutionResponse resp;
+        std::string query = "YIELD 0xFF BIT_AND 0xF0 AS result";
+        auto code = client_->execute(query, resp);
+        ASSERT_EQ(cpp2::ErrorCode::SUCCEEDED, code) << resp.get_error_msg();
+
+        std::vector<std::string> expectedColNames{
+            {"result"}
+        };
+        EXPECT_TRUE(verifyColNames(resp, expectedColNames));
+
+        std::vector<std::tuple<int64_t>> expected{
+            {0xF0}
+        };
+        EXPECT_TRUE(verifyResult(resp, expected));
+    }
+    // &
+    {
+        cpp2::ExecutionResponse resp;
+        std::string query = "YIELD 1 & 1 AS result";
+        auto code = client_->execute(query, resp);
+        ASSERT_EQ(cpp2::ErrorCode::SUCCEEDED, code) << resp.get_error_msg();
+
+        std::vector<std::string> expectedColNames{
+            {"result"}
+        };
+        EXPECT_TRUE(verifyColNames(resp, expectedColNames));
+
+        std::vector<std::tuple<int64_t>> expected{
+            {1}
+        };
+        EXPECT_TRUE(verifyResult(resp, expected));
+    }
+    // BIT_OR
+    {
+        cpp2::ExecutionResponse resp;
+        std::string query = "YIELD 0xF0 BIT_OR 0x0F AS result";
+        auto code = client_->execute(query, resp);
+        ASSERT_EQ(cpp2::ErrorCode::SUCCEEDED, code) << resp.get_error_msg();
+
+        std::vector<std::string> expectedColNames{
+            {"result"}
+        };
+        EXPECT_TRUE(verifyColNames(resp, expectedColNames));
+
+        std::vector<std::tuple<int64_t>> expected{
+            {0xFF}
+        };
+        EXPECT_TRUE(verifyResult(resp, expected));
+    }
+    // |
+    {
+        cpp2::ExecutionResponse resp;
+        std::string query = "YIELD 1 | 0 AS result";
+        auto code = client_->execute(query, resp);
+        ASSERT_EQ(cpp2::ErrorCode::SUCCEEDED, code) << resp.get_error_msg();
+
+        std::vector<std::string> expectedColNames{
+            {"result"}
+        };
+        EXPECT_TRUE(verifyColNames(resp, expectedColNames));
+
+        std::vector<std::tuple<int64_t>> expected{
+            {1}
+        };
+        EXPECT_TRUE(verifyResult(resp, expected));
+    }
+    // BIT_XOR
+    {
+        cpp2::ExecutionResponse resp;
+        std::string query = "YIELD 0xFF BIT_XOR 0xF0 AS result";
+        auto code = client_->execute(query, resp);
+        ASSERT_EQ(cpp2::ErrorCode::SUCCEEDED, code) << resp.get_error_msg();
+
+        std::vector<std::string> expectedColNames{
+            {"result"}
+        };
+        EXPECT_TRUE(verifyColNames(resp, expectedColNames));
+
+        std::vector<std::tuple<int64_t>> expected{
+            {0x0F}
+        };
+        EXPECT_TRUE(verifyResult(resp, expected));
+    }
+    // ^
+    {
+        cpp2::ExecutionResponse resp;
+        std::string query = "YIELD 1 ^ 1 AS result";
+        auto code = client_->execute(query, resp);
+        ASSERT_EQ(cpp2::ErrorCode::SUCCEEDED, code) << resp.get_error_msg();
+
+        std::vector<std::string> expectedColNames{
+            {"result"}
+        };
+        EXPECT_TRUE(verifyColNames(resp, expectedColNames));
+
+        std::vector<std::tuple<int64_t>> expected{
+            {0}
+        };
+        EXPECT_TRUE(verifyResult(resp, expected));
+    }
+}
+
 }   // namespace graph
 }   // namespace nebula
 

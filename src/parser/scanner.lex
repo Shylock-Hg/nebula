@@ -311,6 +311,7 @@ RECOVER                     ([Rr][Ee][Cc][Oo][Vv][Ee][Rr])
 "%"                         { return TokenType::MOD; }
 "!"                         { return TokenType::NOT; }
 "^"                         { return TokenType::XOR; }
+"&"                         { return TokenType::AMPERSAND; }
 
 "<"                         { return TokenType::LT; }
 "<="                        { return TokenType::LE; }

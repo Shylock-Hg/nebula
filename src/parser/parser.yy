@@ -122,7 +122,7 @@ class GraphScanner;
 
 /* symbols */
 %token L_PAREN R_PAREN L_BRACKET R_BRACKET L_BRACE R_BRACE COMMA
-%token PIPE OR AND XOR LT LE GT GE EQ NE PLUS MINUS MUL DIV MOD NOT NEG ASSIGN
+%token PIPE OR AND XOR LT LE GT GE EQ NE PLUS MINUS MUL DIV MOD NOT NEG ASSIGN AMPERSAND
 %token DOT COLON SEMICOLON L_ARROW R_ARROW AT
 %token ID_PROP TYPE_PROP SRC_ID_PROP DST_ID_PROP RANK_PROP INPUT_REF DST_REF SRC_REF
 
@@ -135,6 +135,7 @@ class GraphScanner;
 %type <strval> name_label unreserved_keyword agg_function
 %type <strval> admin_operation admin_para
 %type <expr> expression logic_xor_expression logic_or_expression logic_and_expression
+%type <expr> bit_expression bit_and_expression bit_or_expression bit_xor_expression
 %type <expr> relational_expression multiplicative_expression additive_expression arithmetic_xor_expression
 %type <expr> unary_expression primary_expression equality_expression base_expression
 %type <expr> src_ref_expression
@@ -463,6 +464,57 @@ type_spec
     | KW_TIMESTAMP { $$ = ColumnType::TIMESTAMP; }
     ;
 
+bit_and_expression:
+    unary_integer KW_BIT_AND unary_integer  {
+        $$ = new BitExpression($1, BitExpression::Operator::BIT_AND, $3);
+    }
+    | unary_integer AMPERSAND unary_integer  {
+        $$ = new BitExpression($1, BitExpression::Operator::BIT_AND, $3);
+    }
+    | bit_and_expression KW_BIT_AND unary_integer {
+        $$ = new BitExpression($1, BitExpression::Operator::BIT_AND, $3);
+    }
+    | bit_and_expression AMPERSAND unary_integer {
+        $$ = new BitExpression($1, BitExpression::Operator::BIT_AND, $3);
+    }
+    ;
+
+bit_or_expression:
+    unary_integer KW_BIT_OR unary_integer {
+        $$ = new BitExpression($1, BitExpression::Operator::BIT_OR, $3);
+    }
+    //| unary_integer PIPE unary_integer {
+        //$$ = new BitExpression($1, BitExpression::Operator::BIT_OR, $3);
+    //}
+    | bit_or_expression KW_BIT_OR unary_integer {
+        $$ = new BitExpression($1, BitExpression::Operator::BIT_OR, $3);
+    }
+    //| bit_or_expression PIPE unary_integer {
+        //$$ = new BitExpression($1, BitExpression::Operator::BIT_OR, $3);
+    //}
+    ;
+
+bit_xor_expression:
+    unary_integer KW_BIT_XOR unary_integer {
+        $$ = new BitExpression($1, BitExpression::Operator::BIT_XOR, $3);
+    }
+    | unary_integer '^' unary_integer {
+        $$ = new BitExpression($1, BitExpression::Operator::BIT_XOR, $3);
+    }
+    | bit_xor_expression KW_BIT_XOR unary_integer {
+        $$ = new BitExpression($1, BitExpression::Operator::BIT_XOR, $3);
+    }
+    | bit_xor_expression '^' unary_integer {
+        $$ = new BitExpression($1, BitExpression::Operator::BIT_XOR, $3);
+    }
+    ;
+
+bit_expression:
+    bit_and_expression { $$ = $1; }
+    | bit_or_expression { $$ = $1; }
+    | bit_xor_expression { $$ = $1; }
+    ;
+
 arithmetic_xor_expression
     : unary_expression { $$ = $1; }
     | arithmetic_xor_expression XOR unary_expression {
@@ -548,6 +600,7 @@ logic_xor_expression
 
 expression
     : logic_xor_expression { $$ = $1; }
+    | bit_expression { $$ = $1; }
     ;
 
 go_sentence

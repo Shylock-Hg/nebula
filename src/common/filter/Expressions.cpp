@@ -405,6 +405,81 @@ const char* PrimaryExpression::decode(const char *pos, const char *end) {
     return pos;
 }
 
+std::string IntegerExpression::toString() const {
+    char buf[128];
+    snprintf(buf, sizeof(buf), "%ld", operand_);
+    return buf;
+}
+
+void IntegerExpression::encode(Cord &cord) const {
+    cord << kindToInt(kind());
+    cord << operand_;
+}
+
+const char* IntegerExpression::decode(const char *pos, const char *end) {
+    THROW_IF_NO_SPACE(pos, end, 8UL);
+    operand_ = *reinterpret_cast<const int64_t*>(pos);
+    pos += 8;
+    return pos;
+}
+
+std::string DoubleExpression::toString() const {
+    char buf[512];
+    int digits10 = std::numeric_limits<double>::digits10;
+    std::string fmt = folly::sformat("%.{}lf", digits10);
+    snprintf(buf, sizeof(buf), fmt.c_str(), operand_);
+    return buf;
+}
+
+void DoubleExpression::encode(Cord &cord) const {
+    cord << kindToInt(kind());
+    cord << operand_;
+}
+
+const char* DoubleExpression::decode(const char *pos, const char *end) {
+    THROW_IF_NO_SPACE(pos, end, 8UL);
+    operand_ = *reinterpret_cast<const double*>(pos);
+    pos += 8;
+    return pos;
+}
+
+std::string BoolExpression::toString() const {
+    char buf[8];
+    snprintf(buf, sizeof(buf), "%s", operand_ ? "true" : "false");
+    return buf;
+}
+
+void BoolExpression::encode(Cord &cord) const {
+    cord << kindToInt(kind());
+    cord << static_cast<uint8_t>(operand_);
+}
+
+const char* BoolExpression::decode(const char *pos, const char *end) {
+    THROW_IF_NO_SPACE(pos, end, 1UL);
+    operand_ = *reinterpret_cast<const bool*>(pos++);
+    return pos;
+}
+
+std::string StringExpression::toString() const {
+    return operand_;
+}
+
+void StringExpression::encode(Cord &cord) const {
+    cord << kindToInt(kind());
+    auto &str = operand_;
+    cord << static_cast<uint16_t>(str.size());
+    cord << str;
+}
+
+const char* StringExpression::decode(const char *pos, const char *end) {
+    THROW_IF_NO_SPACE(pos, end, 2UL);
+    auto size = *reinterpret_cast<const uint16_t*>(pos);
+    pos += 2;
+    THROW_IF_NO_SPACE(pos, end, static_cast<uint64_t>(size));
+    operand_ = std::string(pos, size);
+    pos += size;
+    return pos;
+}
 
 std::string FunctionCallExpression::toString() const {
     std::string buf;
@@ -1075,6 +1150,81 @@ const char* LogicalExpression::decode(const char *pos, const char *end) {
     return right_->decode(pos, end);
 }
 
+
+std::string BitExpression::toString() const {
+    std::string buf;
+    buf.reserve(256);
+    buf += '(';
+    buf.append(left_->toString());
+    switch (op_) {
+        case Operator::BIT_AND:
+            buf += "&";
+            break;
+        case Operator::BIT_OR:
+            buf += "|";
+            break;
+        case Operator::BIT_XOR:
+            buf += "^";
+            break;
+    }
+    buf.append(right_->toString());
+    buf += ')';
+    return buf;
+}
+
+OptVariantType BitExpression::eval(Getters &getters) const {
+    auto left = left_->eval(getters);
+    auto right = right_->eval(getters);
+
+    if (!left.ok()) {
+        return left;
+    }
+
+    if (!right.ok()) {
+        return right;
+    }
+
+    if (op_ == Operator::BIT_AND) {
+        return asInt(left.value()) & asInt(right.value());
+    } else if (op_ == Operator::BIT_OR) {
+        return asInt(left.value()) | asInt(right.value());
+    } else if (op_ == Operator::BIT_XOR) {
+        return asInt(left.value()) ^ asInt(right.value());
+    } else {
+        // TODO(shylock) FATAL?
+        LOG(FATAL) << "Unknown bit operator " << static_cast<uint8_t>(op_);
+    }
+}
+
+Status BitExpression::prepare() {
+    auto status = left_->prepare();
+    if (!status.ok()) {
+        return status;
+    }
+    status = right_->prepare();
+    return Status::OK();
+}
+
+void BitExpression::encode(Cord &cord) const {
+    cord << kindToInt(kind());
+    cord << static_cast<uint8_t>(op_);
+    left_->encode(cord);
+    right_->encode(cord);
+}
+
+
+const char* BitExpression::decode(const char *pos, const char *end) {
+    THROW_IF_NO_SPACE(pos, end, 2UL);
+    op_ = *reinterpret_cast<const Operator*>(pos++);
+    DCHECK(op_ == Operator::BIT_AND || op_ == Operator::BIT_OR || op_ == Operator::BIT_XOR);
+
+    left_ = makeExpr(*reinterpret_cast<const uint8_t*>(pos++));
+    pos = left_->decode(pos, end);
+
+    THROW_IF_NO_SPACE(pos, end, 1UL);
+    right_ = makeExpr(*reinterpret_cast<const uint8_t*>(pos++));
+    return right_->decode(pos, end);
+}
 
 #undef THROW_IF_NO_SPACE
 
