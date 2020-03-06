@@ -8,6 +8,7 @@
 #define WEBSERVICE_WEBSERVICE_H_
 
 #include "base/Status.h"
+#include "time/WallClock.h"
 
 DECLARE_int32(ws_http_port);
 DECLARE_int32(ws_h2_port);
@@ -50,6 +51,8 @@ public:
     }
 
 private:
+    int64_t startTime_{0};  // Start time in seconds about webservice
+    std::atomic_int64_t connections_{0};  // Count of all request
     bool started_{false};
     std::unique_ptr<proxygen::HTTPServer> server_;
     std::unique_ptr<thread::NamedThread> wsThread_;

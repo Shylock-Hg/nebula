@@ -21,6 +21,7 @@ DEFINE_int32(ws_http_port, 11000, "Port to listen on with HTTP protocol");
 DEFINE_int32(ws_h2_port, 11002, "Port to listen on with HTTP/2 protocol");
 DEFINE_string(ws_ip, "127.0.0.1", "IP/Hostname to bind to");
 DEFINE_int32(ws_threads, 4, "Number of threads for the web service.");
+DEFINE_int32(ws_qps_limit, 10, "Limit the QPS about all HTTP request");
 
 namespace nebula {
 namespace {
@@ -116,6 +117,19 @@ Status WebService::start() {
     options.handlerFactories =
         proxygen::RequestHandlerChain().addThen<WebServiceHandlerFactory>(router_.get()).build();
     options.h2cEnabled = true;
+    // Throw any exception to reject new created connection
+    options.newConnectionFilter = [this](const folly::AsyncTransportWrapper* /* sock */,
+        const folly::SocketAddress* /* address */,
+        const std::string& /* nextProtocolName */,
+        wangle::SecureTransportType /* secureTransportType */,
+        const wangle::TransportInfo& /* tinfo */) {
+        if (FLAGS_ws_qps_limit > 0 && (connections_.fetch_add(1, std::memory_order_relaxed) /
+            (time::WallClock::fastNowInSec()
+            - startTime_) > FLAGS_ws_qps_limit)) {
+            throw std::exception();
+        }
+    };
+
 
     server_ = std::make_unique<HTTPServer>(std::move(options));
     server_->bind(ips);
@@ -140,8 +154,8 @@ Status WebService::start() {
                         FLAGS_ws_h2_port = addresses[1].address.getPort();
                     }
                     LOG(INFO) << "Web service started on "
-                              << "HTTP[" << FLAGS_ws_http_port << "], "
-                              << "HTTP2[" << FLAGS_ws_h2_port << "]";
+                            << "HTTP[" << FLAGS_ws_http_port << "], "
+                            << "HTTP2[" << FLAGS_ws_h2_port << "]";
                     {
                         std::lock_guard<std::mutex> g(mut);
                         serverStartedDone = true;
@@ -174,6 +188,7 @@ Status WebService::start() {
             wsThread_->join();
         }
     }
+    startTime_ = time::WallClock::fastNowInSec();
     return status;
 }
 
