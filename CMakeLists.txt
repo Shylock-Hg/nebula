@@ -77,11 +77,17 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # coverage
 if (ENABLE_TESTING AND ENABLE_COVERAGE)
-    add_compile_options(--coverage)
+    #add_compile_options(--coverage)
     add_compile_options(-g)
     add_compile_options(-O0)
+    add_compile_options(-fprofile-instr-generate)
+    add_compile_options(-fcoverage-mapping)
+    # Disable compress profraw file
+    add_compile_options(-mllvm)
+    add_compile_options(-enable-name-compression=false)
 
-    set(COVERAGES --coverage)
+    #set(COVERAGES --coverage)
+    set(COVERAGES -fprofile-instr-generate)
 endif()
 
 # To detect if ccache is available
