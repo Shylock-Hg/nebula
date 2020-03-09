@@ -182,7 +182,8 @@ bool UpdateVertexProcessor::checkFilter(const PartitionID partId, const VertexID
 
     if (this->exp_ != nullptr) {
         auto filterResult = this->exp_->eval(getters);
-        if (!filterResult.ok() || !Expression::asBool(filterResult.value())) {
+        if ((!filterResult.ok() || !Expression::asBool(filterResult.value()))
+            && !this->insertable_) {
             VLOG(1) << "Filter skips the update";
             return false;
         }

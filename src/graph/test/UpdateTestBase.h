@@ -245,6 +245,25 @@ AssertionResult UpdateTestBase::prepareData() {
                                << static_cast<int32_t>(code);
         }
     }
+    {
+        // For https://github.com/vesoft-inc/nebula/issues/1888
+        cpp2::ExecutionResponse resp;
+        auto query = "INSERT VERTEX course(name, credits) VALUE UUID('issuse1888'):('math', 99)";
+        auto code = client_->execute(query, resp);
+        if (code != cpp2::ErrorCode::SUCCEEDED) {
+            return TestError() << resp.get_error_msg();
+        }
+    }
+    {
+        // For https://github.com/vesoft-inc/nebula/issues/1888
+        cpp2::ExecutionResponse resp;
+        auto query = "INSERT EDGE select(grade, year) VALUE"
+            " UUID('issue1888')->UUID('issue1888'):(233, 2020)";
+        auto code = client_->execute(query, resp);
+        if (code != cpp2::ErrorCode::SUCCEEDED) {
+            return TestError() << resp.get_error_msg();
+        }
+    }
     return TestOK();
 }
 

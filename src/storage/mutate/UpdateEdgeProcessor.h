@@ -67,7 +67,7 @@ private:
     std::string                                                     val_;
     std::unique_ptr<RowUpdater>                                     updater_;
     meta::IndexManager*                                             indexMan_{nullptr};
-    std::vector<std::shared_ptr<nebula::cpp2::IndexItem>>                            indexes_;
+    std::vector<std::shared_ptr<nebula::cpp2::IndexItem>>           indexes_;
 };
 
 }  // namespace storage

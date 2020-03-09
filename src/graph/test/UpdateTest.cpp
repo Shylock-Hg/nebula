@@ -368,6 +368,45 @@ TEST_F(UpdateTest, InvalidTest) {
     }
 }
 
+// Cover https://github.com/vesoft-inc/nebula/issues/1888
+TEST_F(UpdateTest, UpsertNoExist) {
+    // Vertex
+    {
+        cpp2::ExecutionResponse resp;
+        auto query = "UPSERT VERTEX UUID('issuse1888')"
+                     " SET course.name = 'english'"
+                     " WHEN $^.course.credits < 0";
+        auto code = client_->execute(query, resp);
+        ASSERT_EQ(cpp2::ErrorCode::SUCCEEDED, code) << resp.get_error_msg();
+
+        // Check modify
+        query = "FETCH PROP ON course UUID('issuse1888')";
+        code = client_->execute(query, resp);
+        ASSERT_EQ(cpp2::ErrorCode::SUCCEEDED, code) << resp.get_error_msg();
+        std::vector<std::tuple<std::string, int64_t>> expected = {
+            {"english", 99},
+        };
+        ASSERT_TRUE(verifyResult(resp, expected, true, {0}));
+    }
+    // Edge
+    {
+        cpp2::ExecutionResponse resp;
+        auto query = "UPSERT EDGE UUID('issue1888')->UUID('issue1888') OF select"
+                     " SET grade = 234"
+                     " WHEN select.year < 0";
+        auto code = client_->execute(query, resp);
+        ASSERT_EQ(cpp2::ErrorCode::SUCCEEDED, code) << resp.get_error_msg();
+
+        // Check modify
+        query = "FETCH PROP ON select UUID('issue1888')->UUID('issue1888')";
+        code = client_->execute(query, resp);
+        ASSERT_EQ(cpp2::ErrorCode::SUCCEEDED, code) << resp.get_error_msg();
+        std::vector<std::tuple<int64_t, int64_t>> expected = {
+            {234, 2020},
+        };
+        ASSERT_TRUE(verifyResult(resp, expected, true, {0, 1, 2}));
+    }
+}
 
 }   // namespace graph
 }   // namespace nebula
