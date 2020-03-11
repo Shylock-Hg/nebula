@@ -21,7 +21,7 @@ namespace storage {
 void mockData(kvstore::KVStore* kv) {
     LOG(INFO) << "Prepare data...";
     std::vector<kvstore::KV> data;
-    for (int32_t partId = 0; partId < 3; partId++) {
+    for (int32_t partId = 1; partId <= 3; partId++) {
         for (int32_t vertexId = partId * 10; vertexId < (partId + 1) * 10; vertexId++) {
             // NOTE: the range of tagId is [3001, 3008], excluding 3009(for insert test).
             for (int32_t tagId = 3001; tagId < 3010 - 1; tagId++) {
@@ -54,7 +54,10 @@ void mockData(kvstore::KVStore* kv) {
 
 TEST(UpdateVertexTest, Set_Filter_Yield_Test) {
     fs::TempDir rootPath("/tmp/UpdateVertexTest.XXXXXX");
-    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path());
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()});
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
 
     LOG(INFO) << "Prepare meta...";
     auto schemaMan = TestUtils::mockSchemaMan();
@@ -63,8 +66,8 @@ TEST(UpdateVertexTest, Set_Filter_Yield_Test) {
 
     LOG(INFO) << "Build UpdateVertexRequest...";
     GraphSpaceID spaceId = 0;
-    PartitionID partId = 0;
-    VertexID vertexId = 1;
+    PartitionID partId = 1;
+    VertexID vertexId = 11;
     cpp2::UpdateVertexRequest req;
     req.set_space_id(spaceId);
     req.set_vertex_id(vertexId);
@@ -203,7 +206,10 @@ TEST(UpdateVertexTest, Set_Filter_Yield_Test) {
 
 TEST(UpdateVertexTest, Insertable_Test) {
     fs::TempDir rootPath("/tmp/UpdateVertexTest.XXXXXX");
-    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path());
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()});
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
 
     LOG(INFO) << "Prepare meta...";
     auto schemaMan = TestUtils::mockSchemaMan();
@@ -212,8 +218,8 @@ TEST(UpdateVertexTest, Insertable_Test) {
 
     LOG(INFO) << "Build UpdateVertexRequest...";
     GraphSpaceID spaceId = 0;
-    PartitionID partId = 0;
-    VertexID vertexId = 1;
+    PartitionID partId = 1;
+    VertexID vertexId = 11;
     cpp2::UpdateVertexRequest req;
     req.set_space_id(spaceId);
     req.set_vertex_id(vertexId);
@@ -308,7 +314,10 @@ TEST(UpdateVertexTest, Insertable_Test) {
 
 TEST(UpdateVertexTest, Invalid_Set_Test) {
     fs::TempDir rootPath("/tmp/UpdateVertexTest.XXXXXX");
-    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path());
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()});
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
 
     LOG(INFO) << "Prepare meta...";
     auto schemaMan = TestUtils::mockSchemaMan();
@@ -317,8 +326,8 @@ TEST(UpdateVertexTest, Invalid_Set_Test) {
 
     LOG(INFO) << "Build UpdateVertexRequest...";
     GraphSpaceID spaceId = 0;
-    PartitionID partId = 0;
-    VertexID vertexId = 1;
+    PartitionID partId = 1;
+    VertexID vertexId = 11;
     cpp2::UpdateVertexRequest req;
     req.set_space_id(spaceId);
     req.set_vertex_id(vertexId);
@@ -358,7 +367,10 @@ TEST(UpdateVertexTest, Invalid_Set_Test) {
 
 TEST(UpdateVertexTest, Invalid_Filter_Test) {
     fs::TempDir rootPath("/tmp/UpdateVertexTest.XXXXXX");
-    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path());
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()});
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
 
     LOG(INFO) << "Prepare meta...";
     auto schemaMan = TestUtils::mockSchemaMan();
@@ -367,8 +379,8 @@ TEST(UpdateVertexTest, Invalid_Filter_Test) {
 
     LOG(INFO) << "Build UpdateVertexRequest...";
     GraphSpaceID spaceId = 0;
-    PartitionID partId = 0;
-    VertexID vertexId = 1;
+    PartitionID partId = 1;
+    VertexID vertexId = 11;
     cpp2::UpdateVertexRequest req;
     req.set_space_id(spaceId);
     req.set_vertex_id(vertexId);

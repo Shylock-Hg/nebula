@@ -16,8 +16,11 @@ namespace nebula {
 namespace storage {
 
 TEST(AddVerticesTest, SimpleTest) {
+    constexpr int32_t partitions = 6;
     fs::TempDir rootPath("/tmp/AddVerticesTest.XXXXXX");
-    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path());
+    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()});
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
     auto schemaMan = TestUtils::mockSchemaMan();
     auto indexMan = TestUtils::mockIndexMan();
     auto* processor = AddVerticesProcessor::instance(kv.get(),
@@ -32,7 +35,7 @@ TEST(AddVerticesTest, SimpleTest) {
     // partId => List<Vertex>
     // Vertex => {Id, List<VertexProp>}
     // VertexProp => {tagId, tags}
-    for (PartitionID partId = 0; partId < 3; partId++) {
+    for (PartitionID partId = 1; partId <= 3; partId++) {
         auto vertices = TestUtils::setupVertices(partId, partId * 10, 10 * (partId + 1));
         req.parts.emplace(partId, std::move(vertices));
     }
@@ -44,7 +47,7 @@ TEST(AddVerticesTest, SimpleTest) {
     EXPECT_EQ(0, resp.result.failed_codes.size());
 
     LOG(INFO) << "Check data in kv store...";
-    for (PartitionID partId = 0; partId < 3; partId++) {
+    for (PartitionID partId = 1; partId <= 3; partId++) {
         for (VertexID vertexId = 10 * partId; vertexId < 10 * (partId + 1); vertexId++) {
             auto prefix = NebulaKeyUtils::vertexPrefix(partId, vertexId);
             std::unique_ptr<kvstore::KVIterator> iter;

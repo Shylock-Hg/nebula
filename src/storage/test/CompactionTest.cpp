@@ -18,7 +18,7 @@ namespace nebula {
 namespace storage {
 
 void mockData(kvstore::KVStore* kv) {
-    for (PartitionID partId = 0; partId < 3; partId++) {
+    for (PartitionID partId = 1; partId <= 3; partId++) {
         std::vector<kvstore::KV> data;
         for (VertexID vertexId = partId * 10; vertexId < (partId + 1) * 10; vertexId++) {
             for (TagID tagId = 3001; tagId < 3010; tagId++) {
@@ -62,7 +62,7 @@ void mockData(kvstore::KVStore* kv) {
 }
 
 void mockTTLDataExpired(kvstore::KVStore* kv) {
-    for (PartitionID partId = 0; partId < 3; partId++) {
+    for (PartitionID partId = 1; partId <= 3; partId++) {
         std::vector<kvstore::KV> data;
         for (auto vertexId = partId * 10; vertexId < (partId + 1) * 10; vertexId++) {
             // one tag data, the record data will always expire
@@ -111,7 +111,7 @@ void mockTTLDataExpired(kvstore::KVStore* kv) {
 void mockTTLDataNotExpired(kvstore::KVStore* kv) {
     auto tagId = 3001;
     auto edgeType = 101;
-    for (PartitionID partId = 0; partId < 3; partId++) {
+    for (PartitionID partId = 1; partId <= 3; partId++) {
         std::vector<kvstore::KV> data;
         for (auto vertexId = partId * 10; vertexId < (partId + 1) * 10; vertexId++) {
             // one tag data, the record data will never expire
@@ -160,7 +160,7 @@ void mockIndexData(kvstore::KVStore* kv) {
     auto edgeType = 101;
     IndexValues values;
     values.emplace_back(nebula::cpp2::SupportedType::STRING, "col1");
-    for (PartitionID partId = 0; partId < 3; partId++) {
+    for (PartitionID partId = 1; partId <= 3; partId++) {
         std::vector<kvstore::KV> data;
         for (auto vertexId = partId * 10; vertexId < (partId + 1) * 10; vertexId++) {
             auto tiKey = NebulaKeyUtils::vertexIndexKey(partId, tagId + 1000, vertexId, values);
@@ -201,12 +201,14 @@ TEST(NebulaCompactionFilterTest, InvalidSchemaAndMutliVersionsFilterTest) {
     std::unique_ptr<kvstore::CompactionFilterFactoryBuilder> cffBuilder(
                                     new StorageCompactionFilterFactoryBuilder(schemaMan.get(),
                                                                               nullptr));
+    constexpr int32_t partitions = 6;
     std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(rootPath.path(),
-                                                           6,
-                                                           {0, 0},
-                                                           nullptr,
-                                                           false,
-                                                           std::move(cffBuilder)));
+                                                    partitions,
+                                                    {0, network::NetworkUtils::getAvailablePort()},
+                                                    nullptr,
+                                                    false,
+                                                    std::move(cffBuilder)));
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
     LOG(INFO) << "Write some data";
     mockData(kv.get());
     LOG(INFO) << "Let's delete one tag";
@@ -259,7 +261,7 @@ TEST(NebulaCompactionFilterTest, InvalidSchemaAndMutliVersionsFilterTest) {
         ASSERT_EQ(expectedNum, num);
     };
 
-    for (PartitionID partId = 0; partId < 3; partId++) {
+    for (PartitionID partId = 1; partId <= 3; partId++) {
         for (VertexID vertexId = partId * 10; vertexId < (partId + 1) * 10; vertexId++) {
             checkTag(partId, vertexId, 3001, 0);
             for (TagID tagId = 3002; tagId < 3010; tagId++) {
@@ -282,12 +284,14 @@ TEST(NebulaCompactionFilterTest, TTLFilterDataExpiredTest) {
     std::unique_ptr<kvstore::CompactionFilterFactoryBuilder> cffBuilder(
                                     new StorageCompactionFilterFactoryBuilder(schemaMan.get(),
                                                                               nullptr));
+    constexpr int32_t partitions = 6;
     std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(rootPath.path(),
-                                                           6,
-                                                           {0, 0},
-                                                           nullptr,
-                                                           false,
-                                                           std::move(cffBuilder)));
+                                                    partitions,
+                                                    {0, network::NetworkUtils::getAvailablePort()},
+                                                    nullptr,
+                                                    false,
+                                                    std::move(cffBuilder)));
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
 
     LOG(INFO) << "Write some data";
     mockTTLDataExpired(kv.get());
@@ -338,7 +342,7 @@ TEST(NebulaCompactionFilterTest, TTLFilterDataExpiredTest) {
         ASSERT_EQ(expectedNum, num);
     };
 
-    for (PartitionID partId = 0; partId < 3; partId++) {
+    for (PartitionID partId = 1; partId <= 3; partId++) {
         for (VertexID vertexId = partId * 10; vertexId < (partId + 1) * 10; vertexId++) {
             checkTag(partId, vertexId, 3001, 0);
             checkEdge(partId, vertexId, 101, 0, 10001, 0);
@@ -353,12 +357,14 @@ TEST(NebulaCompactionFilterTest, TTLFilterDataNotExpiredTest) {
     std::unique_ptr<kvstore::CompactionFilterFactoryBuilder> cffBuilder(
                                     new StorageCompactionFilterFactoryBuilder(schemaMan.get(),
                                                                               nullptr));
+    constexpr int32_t partitions = 6;
     std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(rootPath.path(),
-                                                           6,
-                                                           {0, 0},
-                                                           nullptr,
-                                                           false,
-                                                           std::move(cffBuilder)));
+                                                    partitions,
+                                                    {0, network::NetworkUtils::getAvailablePort()},
+                                                    nullptr,
+                                                    false,
+                                                    std::move(cffBuilder)));
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
 
     LOG(INFO) << "Write some data";
     mockTTLDataNotExpired(kv.get());
@@ -409,7 +415,7 @@ TEST(NebulaCompactionFilterTest, TTLFilterDataNotExpiredTest) {
         ASSERT_EQ(expectedNum, num);
     };
 
-    for (PartitionID partId = 0; partId < 3; partId++) {
+    for (PartitionID partId = 1; partId <= 3; partId++) {
         for (VertexID vertexId = partId * 10; vertexId < (partId + 1) * 10; vertexId++) {
             checkTag(partId, vertexId, 3001, 1);
             checkEdge(partId, vertexId, 101, 0, 10001, 1);
@@ -426,12 +432,14 @@ TEST(NebulaCompactionFilterTest, DropIndexTest) {
     std::unique_ptr<kvstore::CompactionFilterFactoryBuilder> cffBuilder(
         new StorageCompactionFilterFactoryBuilder(schemaMan.get(),
                                                   indexMan.get()));
+    constexpr int32_t partitions = 6;
     std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(rootPath.path(),
-                                                           6,
-                                                           {0, 0},
-                                                           nullptr,
-                                                           false,
-                                                           std::move(cffBuilder)));
+                                                    partitions,
+                                                    {0, network::NetworkUtils::getAvailablePort()},
+                                                    nullptr,
+                                                    false,
+                                                    std::move(cffBuilder)));
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
 
     LOG(INFO) << "Write some data";
     mockIndexData(kv.get());
@@ -453,7 +461,7 @@ TEST(NebulaCompactionFilterTest, DropIndexTest) {
         ASSERT_EQ(expectedNum, num);
     };
 
-    for (PartitionID partId = 0; partId < 3; partId++) {
+    for (PartitionID partId = 1; partId <= 3; partId++) {
         /**
          * index exists
          */

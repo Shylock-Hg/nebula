@@ -21,7 +21,7 @@ void mockData(kvstore::KVStore* kv,
               meta::SchemaManager* schemaMng,
               TagVersion version) {
     LOG(INFO) << "Prepare data...";
-    for (PartitionID partId = 0; partId < 3; partId++) {
+    for (PartitionID partId = 1; partId <= 3; partId++) {
         std::vector<kvstore::KV> data;
         for (int32_t vertexId = partId * 10; vertexId < (partId + 1) * 10; vertexId++) {
             for (int32_t tagId = 3001; tagId < 3010; tagId++) {
@@ -61,7 +61,7 @@ void testWithVersion(kvstore::KVStore* kv,
         req.set_space_id(0);
         decltype(req.parts) tmpIds;
         std::unordered_set<VertexID> vids;
-        for (auto partId = 0; partId < 3; partId++) {
+        for (auto partId = 1; partId <= 3; partId++) {
             for (auto vertexId =  partId * 10;
                 vertexId < (partId + 1) * 10;
                 vertexId++) {
@@ -120,7 +120,7 @@ void testWithVersion(kvstore::KVStore* kv,
         req.set_space_id(0);
         decltype(req.parts) tmpIds;
         std::unordered_set<VertexID> vids;
-        for (auto partId = 0; partId < 3; partId++) {
+        for (auto partId = 1; partId <= 3; partId++) {
             for (auto vertexId =  partId * 10;
                 vertexId < (partId + 1) * 10;
                 vertexId++) {
@@ -166,7 +166,10 @@ void testWithVersion(kvstore::KVStore* kv,
 
 TEST(QueryVertexPropsTest, SimpleTest) {
     fs::TempDir rootPath("/tmp/QueryVertexPropsTest.XXXXXX");
-    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path());
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()}));
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
 
     LOG(INFO) << "Prepare meta...";
     auto schemaMng = TestUtils::mockSchemaMan();
@@ -183,7 +186,10 @@ TEST(QueryVertexPropsTest, SimpleTest) {
 
 TEST(QueryVertexPropsTest, QueryAfterTagAltered) {
     fs::TempDir rootPath("/tmp/QueryVertexPropsTest.XXXXXX");
-    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path());
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()}));
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
     auto executor = std::make_unique<folly::CPUThreadPoolExecutor>(3);
 
     LOG(INFO) << "Prepare meta...";
@@ -218,7 +224,7 @@ TEST(QueryVertexPropsTest, QueryAfterTagAltered) {
         cpp2::VertexPropRequest req;
         req.set_space_id(spaceId);
         decltype(req.parts) tmpIds;
-        for (auto partId = 0; partId < 3; partId++) {
+        for (auto partId = 1; partId <= 3; partId++) {
             for (auto vertexId =  partId * 10;
                 vertexId < (partId + 1) * 10;
                 vertexId++) {
@@ -275,7 +281,7 @@ TEST(QueryVertexPropsTest, QueryAfterTagAltered) {
     version = std::numeric_limits<int64_t>::max() - 100;
     {
         LOG(INFO) << "Now update the data with new tag prop.";
-        for (auto partId = 0; partId < 3; partId++) {
+        for (auto partId = 1; partId <= 3; partId++) {
             std::vector<kvstore::KV> data;
             for (auto vertexId = partId * 10; vertexId < (partId + 1) * 10; vertexId++) {
                 for (auto tagId = 3001; tagId < 3010; tagId++) {
@@ -309,7 +315,7 @@ TEST(QueryVertexPropsTest, QueryAfterTagAltered) {
         cpp2::VertexPropRequest req;
         req.set_space_id(0);
         decltype(req.parts) tmpIds;
-        for (auto partId = 0; partId < 3; partId++) {
+        for (auto partId = 1; partId <= 3; partId++) {
             for (auto vertexId =  partId * 10;
                 vertexId < (partId + 1) * 10;
                 vertexId++) {
@@ -385,7 +391,7 @@ TEST(QueryVertexPropsTest, QueryAfterTagAltered) {
         cpp2::VertexPropRequest req;
         req.set_space_id(spaceId);
         decltype(req.parts) tmpIds;
-        for (auto partId = 0; partId < 3; partId++) {
+        for (auto partId = 1; partId <= 3; partId++) {
             for (auto vertexId =  partId * 10;
                 vertexId < (partId + 1) * 10;
                 vertexId++) {
@@ -442,13 +448,16 @@ TEST(QueryVertexPropsTest, QueryAfterTagAltered) {
 
 TEST(QueryVertexPropsTest, TTLTest) {
     fs::TempDir rootPath("/tmp/QueryVertexPropsTest.XXXXXX");
-    std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(rootPath.path()));
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()}));
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
 
     LOG(INFO) << "Prepare meta...";
     auto schemaMan = TestUtils::mockSchemaWithTTLMan();
 
     LOG(INFO) << "Prepare data...";
-    for (auto partId = 0; partId < 3; partId++) {
+    for (auto partId = 1; partId <= 3; partId++) {
         std::vector<kvstore::KV> data;
         for (auto vertexId = partId * 10; vertexId < (partId + 1) * 10; vertexId++) {
             auto tagId = 3001;
@@ -481,7 +490,7 @@ TEST(QueryVertexPropsTest, TTLTest) {
     cpp2::VertexPropRequest req;
     req.set_space_id(0);
     decltype(req.parts) tmpIds;
-    for (auto partId = 0; partId < 3; partId++) {
+    for (auto partId = 1; partId <= 3; partId++) {
         for (auto vertexId =  partId * 10;
              vertexId < (partId + 1) * 10;
              vertexId++) {

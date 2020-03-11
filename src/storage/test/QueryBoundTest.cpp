@@ -22,7 +22,7 @@ namespace nebula {
 namespace storage {
 
 void mockData(kvstore::KVStore* kv) {
-    for (PartitionID partId = 0; partId < 3; partId++) {
+    for (PartitionID partId = 1; partId <= 3; partId++) {
         std::vector<kvstore::KV> data;
         for (VertexID vertexId = partId * 10; vertexId < (partId + 1) * 10; vertexId++) {
             for (TagID tagId = 3001; tagId < 3010; tagId++) {
@@ -93,7 +93,7 @@ void mockData(kvstore::KVStore* kv) {
 void buildRequest(cpp2::GetNeighborsRequest& req, const std::vector<EdgeType>& et) {
     req.set_space_id(0);
     decltype(req.parts) tmpIds;
-    for (PartitionID partId = 0; partId < 3; partId++) {
+    for (PartitionID partId = 1; partId <= 3; partId++) {
         for (VertexID vertexId =  partId * 10; vertexId < (partId + 1) * 10; vertexId++) {
             tmpIds[partId].emplace_back(vertexId);
         }
@@ -203,7 +203,10 @@ void checkResponse(cpp2::QueryResponse& resp,
 
 TEST(QueryBoundTest, OutBoundSimpleTest) {
     fs::TempDir rootPath("/tmp/QueryBoundTest.XXXXXX");
-    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path());
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()});
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
 
     LOG(INFO) << "Prepare meta...";
     auto schemaMan = TestUtils::mockSchemaMan();
@@ -228,7 +231,10 @@ TEST(QueryBoundTest, OutBoundSimpleTest) {
 TEST(QueryBoundTest, inBoundSimpleTest) {
     fs::TempDir rootPath("/tmp/QueryBoundTest.XXXXXX");
     LOG(INFO) << "Prepare meta...";
-    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path());
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()});
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
 
     auto schemaMan = TestUtils::mockSchemaMan();
     mockData(kv.get());
@@ -252,7 +258,10 @@ TEST(QueryBoundTest, inBoundSimpleTest) {
 TEST(QueryBoundTest, FilterTest_OnlyEdgeFilter) {
     fs::TempDir rootPath("/tmp/QueryBoundTest.XXXXXX");
     LOG(INFO) << "Prepare meta...";
-    std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(rootPath.path()));
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()}));
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
     auto schemaMan = TestUtils::mockSchemaMan();
     mockData(kv.get());
 
@@ -286,7 +295,10 @@ TEST(QueryBoundTest, FilterTest_OnlyEdgeFilter) {
 TEST(QueryBoundTest, FilterTest_OnlyTagFilter) {
     fs::TempDir rootPath("/tmp/QueryBoundTest.XXXXXX");
     LOG(INFO) << "Prepare meta...";
-    std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(rootPath.path()));
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()}));
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
     auto schemaMan = TestUtils::mockSchemaMan();
     mockData(kv.get());
 
@@ -376,7 +388,10 @@ TEST(QueryBoundTest, GenBucketsTest) {
 TEST(QueryBoundTest, FilterTest_TagAndEdgeFilter) {
     fs::TempDir rootPath("/tmp/QueryBoundTest.XXXXXX");
     LOG(INFO) << "Prepare meta...";
-    std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(rootPath.path()));
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()}));
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
     auto schemaMan = TestUtils::mockSchemaMan();
     mockData(kv.get());
 
@@ -419,7 +434,10 @@ TEST(QueryBoundTest, FilterTest_TagAndEdgeFilter) {
 TEST(QueryBoundTest, FilterTest_InvalidFilter) {
     fs::TempDir rootPath("/tmp/QueryBoundTest.XXXXXX");
     LOG(INFO) << "Prepare meta...";
-    std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(rootPath.path()));
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()}));
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
     auto schemaMan = TestUtils::mockSchemaMan();
     mockData(kv.get());
 
@@ -450,7 +468,10 @@ TEST(QueryBoundTest, FilterTest_InvalidFilter) {
 
 TEST(QueryBoundTest, MultiEdgeQueryTest) {
     fs::TempDir rootPath("/tmp/QueryBoundTest.XXXXXX");
-    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path());
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()});
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
 
     LOG(INFO) << "Prepare meta...";
     auto schemaMan = TestUtils::mockSchemaMan();
@@ -479,7 +500,10 @@ TEST(QueryBoundTest, MaxEdgesReturenedTest) {
     FLAGS_max_edge_returned_per_vertex = 5;
     fs::TempDir rootPath("/tmp/QueryBoundTest.XXXXXX");
     LOG(INFO) << "Prepare meta...";
-    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path());
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()});
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
 
     auto schemaMan = TestUtils::mockSchemaMan();
     mockData(kv.get());

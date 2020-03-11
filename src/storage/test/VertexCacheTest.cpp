@@ -27,8 +27,9 @@ void addVertices(kvstore::KVStore* kv,  meta::SchemaManager* schemaMan,
     cpp2::AddVerticesRequest req;
     req.space_id = 0;
     req.overwritable = true;
-    auto vertices = TestUtils::setupVertices(0, 0, nums, 3001, 3002);
-    req.parts.emplace(0, std::move(vertices));
+    constexpr int32_t partId = 1;
+    auto vertices = TestUtils::setupVertices(partId, 0, nums, 3001, 3002);
+    req.parts.emplace(partId, std::move(vertices));
 
     LOG(INFO) << "Test AddVerticesProcessor...";
     auto fut = processor->getFuture();
@@ -126,7 +127,10 @@ void fetchVertices(kvstore::KVStore* kv,
 TEST(VertexCacheTest, SimpleTest) {
     FLAGS_max_handlers_per_req = 1;
     fs::TempDir rootPath("/tmp/VertexCacheTest.XXXXXX");
-    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path());
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()});
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
     auto schemaMan = TestUtils::mockSchemaMan();
     auto indexMan = std::make_unique<AdHocIndexManager>();
     auto executor = std::make_unique<folly::CPUThreadPoolExecutor>(1);

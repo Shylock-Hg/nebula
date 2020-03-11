@@ -21,7 +21,7 @@ namespace storage {
 void mockData(kvstore::KVStore* kv) {
     LOG(INFO) << "Prepare data...";
     std::vector<kvstore::KV> data;
-    for (PartitionID partId = 0; partId < 3; partId++) {
+    for (PartitionID partId = 1; partId <= 3; partId++) {
         for (VertexID vertexId = partId * 10; vertexId < (partId + 1) * 10; vertexId++) {
             for (TagID tagId = 3001; tagId < 3010; tagId++) {
                 // Write multi versions, we should get/update the latest version
@@ -81,7 +81,10 @@ void mockData(kvstore::KVStore* kv) {
 
 TEST(UpdateEdgeTest, Set_Filter_Yield_Test) {
     fs::TempDir rootPath("/tmp/UpdateEdgeTest.XXXXXX");
-    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path());
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()});
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
 
     LOG(INFO) << "Prepare meta...";
     auto schemaMan = TestUtils::mockSchemaMan();
@@ -90,10 +93,10 @@ TEST(UpdateEdgeTest, Set_Filter_Yield_Test) {
 
     LOG(INFO) << "Build UpdateEdgeRequest...";
     GraphSpaceID spaceId = 0;
-    PartitionID partId = 0;
-    VertexID srcId = 1;
+    PartitionID partId = 1;
+    VertexID srcId = 11;
     VertexID dstId = 10001;
-    // src = 1, edge_type = 101, ranking = 0, dst = 10001
+    // src = 11, edge_type = 101, ranking = 0, dst = 10001
     storage::cpp2::EdgeKey edgeKey;
     edgeKey.set_src(srcId);
     edgeKey.set_edge_type(101);
@@ -217,7 +220,10 @@ TEST(UpdateEdgeTest, Set_Filter_Yield_Test) {
 
 TEST(UpdateEdgeTest, Insertable_Test) {
     fs::TempDir rootPath("/tmp/UpdateEdgeTest.XXXXXX");
-    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path());
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()});
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
 
     LOG(INFO) << "Prepare meta...";
     auto schemaMan = TestUtils::mockSchemaMan();
@@ -226,10 +232,10 @@ TEST(UpdateEdgeTest, Insertable_Test) {
 
     LOG(INFO) << "Build UpdateEdgeRequest...";
     GraphSpaceID spaceId = 0;
-    PartitionID partId = 0;
-    VertexID srcId = 1;
+    PartitionID partId = 1;
+    VertexID srcId = 11;
     VertexID dstId = 10008;
-    // src = 1, edge_type = 101, ranking = 0, dst = 10008
+    // src = 11, edge_type = 101, ranking = 0, dst = 10008
     storage::cpp2::EdgeKey edgeKey;
     edgeKey.set_src(srcId);
     edgeKey.set_edge_type(101);

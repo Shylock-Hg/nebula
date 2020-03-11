@@ -19,9 +19,12 @@ namespace storage {
 
 TEST(DeleteVerticesTest, SimpleTest) {
     fs::TempDir rootPath("/tmp/DeleteVertexTest.XXXXXX");
-    std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(rootPath.path()));
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()}));
     auto schemaMan = TestUtils::mockSchemaMan();
     auto indexMan = TestUtils::mockIndexMan();
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
     // Add vertices
     {
         auto* processor = AddVerticesProcessor::instance(kv.get(),
@@ -32,7 +35,7 @@ TEST(DeleteVerticesTest, SimpleTest) {
         req.space_id = 0;
         req.overwritable = false;
         // partId => List<Vertex>
-        for (PartitionID partId = 0; partId < 3; partId++) {
+        for (PartitionID partId = 1; partId <= 3; partId++) {
             auto vertices = TestUtils::setupVertices(partId, partId * 10, 10 * (partId + 1));
             req.parts.emplace(partId, std::move(vertices));
         }
@@ -42,7 +45,7 @@ TEST(DeleteVerticesTest, SimpleTest) {
         auto resp = std::move(fut).get();
         EXPECT_EQ(0, resp.result.failed_codes.size());
 
-        for (PartitionID partId = 0; partId < 3; partId++) {
+        for (PartitionID partId = 1; partId <= 3; partId++) {
             for (VertexID vertexId = 10 * partId; vertexId < 10 * (partId + 1); vertexId++) {
                 auto prefix = NebulaKeyUtils::vertexPrefix(partId, vertexId);
                 std::unique_ptr<kvstore::KVIterator> iter;
@@ -63,7 +66,7 @@ TEST(DeleteVerticesTest, SimpleTest) {
     {
         cpp2::DeleteVerticesRequest req;
         req.set_space_id(0);
-        for (PartitionID partId = 0; partId < 3; partId++) {
+        for (PartitionID partId = 1; partId <= 3; partId++) {
             std::vector<VertexID> vertices;
             for (VertexID vertexId = 10 * partId; vertexId < 10 * (partId + 1); vertexId++) {
                 vertices.emplace_back(vertexId);
@@ -81,7 +84,7 @@ TEST(DeleteVerticesTest, SimpleTest) {
         EXPECT_EQ(0, resp.result.failed_codes.size());
     }
 
-    for (PartitionID partId = 0; partId < 3; partId++) {
+    for (PartitionID partId = 1; partId <= 3; partId++) {
         for (VertexID vertexId = 10 * partId; vertexId < 10 * (partId + 1); vertexId++) {
             auto prefix = NebulaKeyUtils::vertexPrefix(partId, vertexId);
             std::unique_ptr<kvstore::KVIterator> iter;

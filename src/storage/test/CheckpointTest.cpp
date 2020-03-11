@@ -17,12 +17,12 @@ namespace storage {
 TEST(CheckpointTest, simpleTest) {
     fs::TempDir dataPath("/tmp/Checkpoint_Test_src.XXXXXX");
     constexpr int32_t partitions = 6;
-    std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(dataPath.path(), partitions));
+    std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(dataPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()}/*For leader check*/));
     auto schemaMan = TestUtils::mockSchemaMan();
     auto indexMan = TestUtils::mockIndexMan();
-    auto *store = dynamic_cast<kvstore::NebulaStore*>(kv.get());
     // Hard code the default space 0
-    ASSERT_TRUE(store->waitNLeadersOnSpace(0, partitions));
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
     // Add vertices
     {
         auto* processor = AddVerticesProcessor::instance(kv.get(),
@@ -33,7 +33,7 @@ TEST(CheckpointTest, simpleTest) {
         req.space_id = 0;
         req.overwritable = false;
         // partId => List<Vertex>
-        for (PartitionID partId = 0; partId < 3; partId++) {
+        for (PartitionID partId = 1; partId <= 3; partId++) {
             auto vertices = TestUtils::setupVertices(partId, 10, 10, 0, partId * 10);
             req.parts.emplace(partId, std::move(vertices));
         }

@@ -23,7 +23,7 @@ void mockData(kvstore::KVStore* kv,
     auto edgeType = 101;
     auto spaceId = 0;
     auto schema = schemaMng->getEdgeSchema(spaceId, edgeType);
-    for (PartitionID partId = 0; partId < 3; partId++) {
+    for (PartitionID partId = 1; partId <= 3; partId++) {
         std::vector<kvstore::KV> data;
         for (VertexID vertexId = partId * 10; vertexId < (partId + 1) * 10; vertexId++) {
             // Generate 7 edges for each source vertex id
@@ -57,7 +57,7 @@ void mockData(kvstore::KVStore* kv,
 void buildRequest(cpp2::EdgePropRequest& req) {
     req.set_space_id(0);
     decltype(req.parts) tmpEdges;
-    for (PartitionID partId = 0; partId < 3; partId++) {
+    for (PartitionID partId = 1; partId <= 3; partId++) {
         for (VertexID vertexId =  partId * 10; vertexId < (partId + 1) * 10; vertexId++) {
             for (VertexID dstId = 10001; dstId <= 10007; dstId++) {
                 cpp2::EdgeKey edgeKey;
@@ -94,8 +94,8 @@ void checkResponse(cpp2::EdgePropResponse& resp, uint32_t expectedColSize) {
             // We can't ensure the order, so just check the srcId range.
             int64_t v;
             EXPECT_EQ(ResultType::SUCCEEDED, it->getVid(0, v));
-            CHECK_GE(30, v);
-            CHECK_LE(0, v);
+            CHECK_GE(40, v);
+            CHECK_LE(10, v);
         }
         {
             // _rank
@@ -198,7 +198,10 @@ void checkTTLResponse(cpp2::EdgePropResponse& resp) {
 
 TEST(QueryEdgePropsTest, SimpleTest) {
     fs::TempDir rootPath("/tmp/QueryEdgePropsTest.XXXXXX");
-    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path());
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()}));
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
 
     LOG(INFO) << "Prepare meta...";
     auto schemaMng = TestUtils::mockSchemaMan();
@@ -220,7 +223,10 @@ TEST(QueryEdgePropsTest, SimpleTest) {
 
 TEST(QueryEdgePropsTest, TTLTest) {
     fs::TempDir rootPath("/tmp/QueryEdgePropsTest.XXXXXX");
-    std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(rootPath.path()));
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()}));
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
 
     LOG(INFO) << "Prepare meta...";
     auto schemaMng = TestUtils::mockSchemaWithTTLMan();
@@ -242,7 +248,10 @@ TEST(QueryEdgePropsTest, TTLTest) {
 
 TEST(QueryEdgePropsTest, QueryAfterEdgeAltered) {
     fs::TempDir rootPath("/tmp/QueryEdgePropsTest.XXXXXX");
-    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path());
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()}));
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
 
     LOG(INFO) << "Prepare meta...";
     auto schemaMng = TestUtils::mockSchemaMan();
@@ -293,7 +302,7 @@ TEST(QueryEdgePropsTest, QueryAfterEdgeAltered) {
     {
         LOG(INFO) << "Now update data with new edge prop";
         auto edgeType = 101;
-        for (auto partId = 0; partId < 3; partId++) {
+        for (auto partId = 1; partId <= 3; partId++) {
             std::vector<kvstore::KV> data;
             for (auto vertexId = partId * 10; vertexId < (partId + 1) * 10; vertexId++) {
                 // Generate 7 edges for each source vertex id

@@ -18,7 +18,7 @@ namespace nebula {
 namespace storage {
 
 void mockData(kvstore::KVStore* kv) {
-    for (int32_t partId = 0; partId < 3; partId++) {
+    for (int32_t partId = 1; partId <= 3; partId++) {
         std::vector<kvstore::KV> data;
         for (int32_t vertexId = partId * 10; vertexId < (partId + 1) * 10; vertexId++) {
             for (int32_t tagId = 3001; tagId < 3010; tagId++) {
@@ -61,7 +61,7 @@ void mockData(kvstore::KVStore* kv) {
 void buildRequest(cpp2::GetNeighborsRequest& req) {
     req.set_space_id(0);
     decltype(req.parts) tmpIds;
-    for (auto partId = 0; partId < 3; partId++) {
+    for (auto partId = 1; partId <= 3; partId++) {
         for (auto vertexId =  partId * 10; vertexId < (partId + 1) * 10; vertexId++) {
             tmpIds[partId].emplace_back(vertexId);
         }
@@ -135,7 +135,10 @@ void checkResponse(const cpp2::QueryStatsResponse& resp) {
 
 TEST(QueryStatsTest, StatsSimpleTest) {
     fs::TempDir rootPath("/tmp/QueryStatsTest.XXXXXX");
-    std::unique_ptr<kvstore::KVStore> kv = TestUtils::initKV(rootPath.path());
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kv(TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()}));
+    TestUtils::waitUntilAllElected(kv.get(), 0, partitions);
 
     LOG(INFO) << "Prepare meta...";
     auto schemaMan = TestUtils::mockSchemaMan();

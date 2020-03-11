@@ -56,9 +56,9 @@ public:
         } else {
             auto memPartMan = std::make_unique<kvstore::MemPartManager>();
             // GraphSpaceID =>  {PartitionIDs}
-            // 0 => {0, 1, 2, 3, 4, 5}
+            // 0 => {1, 2, 3, 4, 5, 6}
             auto& partsMap = memPartMan->partsMap();
-            for (PartitionID partId = 0; partId < partitionNumber; partId++) {
+            for (PartitionID partId = 1; partId <= partitionNumber; partId++) {
                 partsMap[0][partId] = PartMeta();
             }
 

@@ -22,10 +22,13 @@ TEST(StorageServiceHandlerTest, FutureAddVerticesTest) {
     req.overwritable = true;
 
     LOG(INFO) << "Build FutureAddVerticesTest...";
-    req.parts.emplace(0, TestUtils::setupVertices(0, 0, 10, 0, 10));
+    req.parts.emplace(2, TestUtils::setupVertices(0, 0, 10, 0, 10));
     req.parts.emplace(1, TestUtils::setupVertices(1, 0, 20, 0, 30));
     LOG(INFO) << "Test FutureAddVerticesTest...";
-    std::unique_ptr<kvstore::KVStore> kvstore = TestUtils::initKV(rootPath.path());
+    constexpr int32_t partitions = 6;
+    std::unique_ptr<kvstore::KVStore> kvstore = TestUtils::initKV(rootPath.path(), partitions,
+        {0, network::NetworkUtils::getAvailablePort()});
+    TestUtils::waitUntilAllElected(kvstore.get(), 0, partitions);
     auto schemaMan = TestUtils::mockSchemaMan();
     auto indexMan = TestUtils::mockIndexMan();
     auto storageServiceHandler = std::make_unique<StorageServiceHandler>(kvstore.get(),
