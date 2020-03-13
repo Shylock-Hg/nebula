@@ -191,6 +191,17 @@ static constexpr auto is_convertible_v = std::is_constructible<U, T>::value;
 
 std::string versionString();
 
+constexpr char const* logo() {
+    return
+" __    _ .____  ____   .     . .         .      \n"
+" |\\   |  /      /   \\  /     / /        /|    \n"
+" | \\  |  |__.   |,_-<  |     | |       /  \\   \n"
+" |  \\ |  |      |    ` |     | |      /---'\\  \n"
+" |   \\|  /----/ `----'  `._.'  /---/,'      \\ \n"
+;  // NOLINT
+}
+
+
 }  // namespace nebula
 
 #endif  // COMMON_BASE_BASE_H_

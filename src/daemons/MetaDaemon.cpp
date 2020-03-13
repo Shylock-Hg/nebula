@@ -249,7 +249,7 @@ int main(int argc, char *argv[]) {
         if (nebula::value(ret) == localhost) {
             LOG(INFO) << "Check and init root user";
             if (!nebula::meta::RootUserMan::isUserExists(kvstore.get())) {
-                if(!nebula::meta::RootUserMan::initRootUser(kvstore.get())) {
+                if (!nebula::meta::RootUserMan::initRootUser(kvstore.get())) {
                     LOG(ERROR) << "Init root user failed";
                     return EXIT_FAILURE;
                 }
@@ -266,6 +266,7 @@ int main(int argc, char *argv[]) {
 
     auto handler = std::make_shared<nebula::meta::MetaServiceHandler>(kvstore.get(), gClusterId);
     LOG(INFO) << "The meta deamon start on " << localhost;
+    LOG(INFO) << std::endl << nebula::logo() << std::endl << nebula::versionString();
     try {
         gServer = std::make_unique<apache::thrift::ThriftServer>();
         gServer->setPort(FLAGS_port);

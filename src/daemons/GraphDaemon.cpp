@@ -149,6 +149,7 @@ int main(int argc, char *argv[]) {
     }
 
     FLOG_INFO("Starting nebula-graphd on %s:%d\n", localIP.c_str(), FLAGS_port);
+    LOG(INFO) << std::endl << nebula::logo() << std::endl << nebula::versionString();
     try {
         gServer->serve();  // Blocking wait until shut down via gServer->stop()
     } catch (const std::exception &e) {

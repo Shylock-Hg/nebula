@@ -142,6 +142,7 @@ bool StorageServer::start() {
                                                            metaClient_.get());
     try {
         LOG(INFO) << "The storage deamon start on " << localHost_;
+        LOG(INFO) << std::endl << nebula::logo() << std::endl << nebula::versionString();
         tfServer_ = std::make_unique<apache::thrift::ThriftServer>();
         tfServer_->setPort(FLAGS_port);
         tfServer_->setReusePort(FLAGS_reuse_port);
