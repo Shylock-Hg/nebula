@@ -17,7 +17,6 @@ using TokenType = nebula::GraphParser::token;
 
 static constexpr size_t MAX_STRING = 4096;
 
-
 %}
 
 %x DQ_STR
@@ -93,10 +92,6 @@ IF                          ([Ii][Ff])
 NOT                         ([Nn][Oo][Tt])
 EXISTS                      ([Ee][Xx][Ii][Ss][Tt][Ss])
 WITH                        ([Ww][Ii][Tt][Hh])
-FIRSTNAME                   ([Ff][Ii][Rr][Ss][Tt][Nn][Aa][Mm][Ee])
-LASTNAME                    ([Ll][Aa][Ss][Tt][Nn][Aa][Mm][Ee])
-EMAIL                       ([Ee][Mm][Aa][Ii][Ll])
-PHONE                       ([Pp][Hh][Oo][Nn][Ee])
 USER                        ([Uu][Ss][Ee][Rr])
 USERS                       ([Uu][Ss][Ee][Rr][Ss])
 PASSWORD                    ([Pp][Aa][Ss][Ss][Ww][Oo][Rr][Dd])
@@ -159,6 +154,8 @@ SNAPSHOTS                   ([Ss][Nn][Aa][Pp][Ss][Hh][Oo][Tt][Ss])
 FORCE                       ([Ff][Oo][Rr][Cc][Ee])
 OFFLINE                     ([Oo][Ff][Ff][Ll][Ii][Nn][Ee])
 BIDIRECT                    ([Bb][Ii][Dd][Ii][Rr][Ee][Cc][Tt])
+ACCOUNT                     ([Aa][Cc][Cc][Oo][Uu][Nn][Tt])
+DBA                         ([Dd][Bb][Aa])
 
 LABEL                       ([a-zA-Z][_a-zA-Z0-9]*)
 DEC                         ([0-9])
@@ -239,10 +236,6 @@ RECOVER                     ([Rr][Ee][Cc][Oo][Vv][Ee][Rr])
 {NOT}                       { return TokenType::KW_NOT; }
 {EXISTS}                    { return TokenType::KW_EXISTS; }
 {WITH}                      { return TokenType::KW_WITH; }
-{FIRSTNAME}                 { return TokenType::KW_FIRSTNAME; }
-{LASTNAME}                  { return TokenType::KW_LASTNAME; }
-{EMAIL}                     { return TokenType::KW_EMAIL; }
-{PHONE}                     { return TokenType::KW_PHONE; }
 {USER}                      { return TokenType::KW_USER; }
 {USERS}                     { return TokenType::KW_USERS; }
 {PASSWORD}                  { return TokenType::KW_PASSWORD; }
@@ -250,6 +243,7 @@ RECOVER                     ([Rr][Ee][Cc][Oo][Vv][Ee][Rr])
 {ROLE}                      { return TokenType::KW_ROLE; }
 {GOD}                       { return TokenType::KW_GOD; }
 {ADMIN}                     { return TokenType::KW_ADMIN; }
+{DBA}                       { return TokenType::KW_DBA; }
 {GUEST}                     { return TokenType::KW_GUEST; }
 {GRANT}                     { return TokenType::KW_GRANT; }
 {REVOKE}                    { return TokenType::KW_REVOKE; }
@@ -312,6 +306,8 @@ RECOVER                     ([Rr][Ee][Cc][Oo][Vv][Ee][Rr])
 {JOB}                       { return TokenType::KW_JOB; }
 {RECOVER}                   { return TokenType::KW_RECOVER; }
 
+{ACCOUNT}                   { return TokenType::KW_ACCOUNT; }
+
 "."                         { return TokenType::DOT; }
 ","                         { return TokenType::COMMA; }
 ":"                         { return TokenType::COLON; }
@@ -360,7 +356,11 @@ RECOVER                     ([Rr][Ee][Cc][Oo][Vv][Ee][Rr])
 {LABEL}                     {
                                 yylval->strval = new std::string(yytext, yyleng);
                                 if (yylval->strval->size() > MAX_STRING) {
-                                    yyterminate();
+                                    auto error = "Out of range of the LABEL length, "
+                                                  "the  max length of LABEL is " +
+                                                  std::to_string(MAX_STRING) + ":";
+                                    delete yylval->strval;
+                                    throw GraphParser::syntax_error(*yylloc, error);
                                 }
                                 return TokenType::LABEL;
                             }
@@ -379,11 +379,14 @@ RECOVER                     ([Rr][Ee][Cc][Oo][Vv][Ee][Rr])
                                         i++;
                                     }
                                     if (yyleng - i > 16) {
-                                        yyterminate();
+                                        throw GraphParser::syntax_error(*yylloc, "Out of range:");
                                     }
                                 }
                                 uint64_t val = 0;
                                 sscanf(yytext, "%lx", &val);
+                                if (val > MAX_ABS_INTEGER) {
+                                    throw GraphParser::syntax_error(*yylloc, "Out of range:");
+                                }
                                 yylval->intval = static_cast<int64_t>(val);
                                 return TokenType::INTEGER;
                             }
@@ -393,14 +396,16 @@ RECOVER                     ([Rr][Ee][Cc][Oo][Vv][Ee][Rr])
                                     while (i < yyleng && yytext[i] == '0') {
                                         i++;
                                     }
-                                    if (yyleng - i > 22) {
-                                        yyterminate();
-                                    } else if (yyleng - i == 22 && yytext[i] != '1') {
-                                        yyterminate();
+                                    if (yyleng - i > 22 ||
+                                            (yyleng - i == 22 && yytext[i] != '1')) {
+                                        throw GraphParser::syntax_error(*yylloc, "Out of range:");
                                     }
                                 }
                                 uint64_t val = 0;
                                 sscanf(yytext, "%lo", &val);
+                                if (val > MAX_ABS_INTEGER) {
+                                    throw GraphParser::syntax_error(*yylloc, "Out of range:");
+                                }
                                 yylval->intval = static_cast<int64_t>(val);
                                 return TokenType::INTEGER;
                             }
@@ -408,12 +413,12 @@ RECOVER                     ([Rr][Ee][Cc][Oo][Vv][Ee][Rr])
                                 try {
                                     folly::StringPiece text(yytext, yyleng);
                                     uint64_t val = folly::to<uint64_t>(text);
-                                    if (val > 9223372036854775808ULL) {
-                                        yyterminate();
+                                    if (val > MAX_ABS_INTEGER) {
+                                        throw GraphParser::syntax_error(*yylloc, "Out of range:");
                                     }
                                     yylval->intval = val;
                                 } catch (...) {
-                                    yyterminate();
+                                    throw GraphParser::syntax_error(*yylloc, "Out of range:");
                                 }
                                 return TokenType::INTEGER;
                             }
@@ -422,7 +427,7 @@ RECOVER                     ([Rr][Ee][Cc][Oo][Vv][Ee][Rr])
                                     folly::StringPiece text(yytext, yyleng);
                                     yylval->doubleval = folly::to<double>(text);
                                 } catch (...) {
-                                    yyterminate();
+                                    throw GraphParser::syntax_error(*yylloc, "Out of range:");
                                 }
                                 return TokenType::DOUBLE;
                             }
@@ -431,7 +436,7 @@ RECOVER                     ([Rr][Ee][Cc][Oo][Vv][Ee][Rr])
                                     folly::StringPiece text(yytext, yyleng);
                                     yylval->doubleval = folly::to<double>(text);
                                 } catch (...) {
-                                    yyterminate();
+                                    throw GraphParser::syntax_error(*yylloc, "Out of range:");
                                 }
                                 return TokenType::DOUBLE;
                             }
@@ -453,7 +458,7 @@ RECOVER                     ([Rr][Ee][Cc][Oo][Vv][Ee][Rr])
                             }
 <DQ_STR,SQ_STR><<EOF>>      {
                                 // Must match '' or ""
-                                throw GraphParser::syntax_error(*yylloc, "unterminated string");
+                                throw GraphParser::syntax_error(*yylloc, "Unterminated string: ");
                             }
 <DQ_STR,SQ_STR>\n           { yyterminate(); }
 <DQ_STR>[^\\\n\"]+          {
