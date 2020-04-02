@@ -106,7 +106,7 @@ static constexpr size_t MAX_ABS_INTEGER = 9223372036854775808ULL;
 %token KW_INT KW_BIGINT KW_DOUBLE KW_STRING KW_BOOL KW_TAG KW_TAGS KW_UNION KW_INTERSECT KW_MINUS
 %token KW_NO KW_OVERWRITE KW_IN KW_DESCRIBE KW_DESC KW_SHOW KW_HOSTS KW_PART KW_PARTS KW_TIMESTAMP KW_ADD
 %token KW_PARTITION_NUM KW_REPLICA_FACTOR KW_CHARSET KW_COLLATE KW_COLLATION
-%token KW_DROP KW_REMOVE KW_SPACES KW_INGEST KW_INDEX KW_INDEXES
+%token KW_DROP KW_REMOVE KW_SPACES KW_INGEST KW_INDEX KW_INDEXES KW_UNIQUE
 %token KW_IF KW_NOT KW_EXISTS KW_WITH
 %token KW_COUNT KW_COUNT_DISTINCT KW_SUM KW_AVG KW_MAX KW_MIN KW_STD KW_BIT_AND KW_BIT_OR KW_BIT_XOR
 %token KW_BY KW_DOWNLOAD KW_HDFS KW_UUID KW_CONFIGS KW_FORCE KW_STATUS
@@ -1198,13 +1198,19 @@ drop_edge_sentence
 
 create_tag_index_sentence
     : KW_CREATE KW_TAG KW_INDEX opt_if_not_exists name_label KW_ON name_label L_PAREN column_name_list R_PAREN {
-        $$ = new CreateTagIndexSentence($5, $7, $9, $4);
+        $$ = new CreateTagIndexSentence($5, $7, $9, $4, nebula::cpp2::KeyType::MUL);
+    }
+    | KW_CREATE KW_TAG KW_UNIQUE KW_INDEX opt_if_not_exists name_label KW_ON name_label L_PAREN column_name_list R_PAREN {
+        $$ = new CreateTagIndexSentence($6, $8, $10, $5, nebula::cpp2::KeyType::UNI);
     }
     ;
 
 create_edge_index_sentence
     : KW_CREATE KW_EDGE KW_INDEX opt_if_not_exists name_label KW_ON name_label L_PAREN column_name_list R_PAREN {
-        $$ = new CreateEdgeIndexSentence($5, $7, $9, $4);
+        $$ = new CreateEdgeIndexSentence($5, $7, $9, $4, nebula::cpp2::KeyType::MUL);
+    }
+    | KW_CREATE KW_EDGE KW_UNIQUE KW_INDEX opt_if_not_exists name_label KW_ON name_label L_PAREN column_name_list R_PAREN {
+        $$ = new CreateEdgeIndexSentence($6, $8, $10, $5, nebula::cpp2::KeyType::UNI);
     }
     ;
 

@@ -95,7 +95,8 @@ reserved_key_words = [
     'KW_IS',
     'KW_NULL',
     'KW_FORCE',
-    'KW_RECOVER'
+    'KW_RECOVER',
+    'KW_UNIQUE'
 ]
 
 

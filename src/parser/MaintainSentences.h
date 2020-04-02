@@ -530,11 +530,13 @@ public:
     CreateTagIndexSentence(std::string *indexName,
                            std::string *tagName,
                            ColumnNameList *columns,
-                           bool ifNotExists)
+                           bool ifNotExists,
+                           nebula::cpp2::KeyType keyType)
         : CreateSentence(ifNotExists) {
         indexName_.reset(indexName);
         tagName_.reset(tagName);
         columns_.reset(columns);
+        keyType_ = keyType;
         kind_ = Kind::kCreateTagIndex;
     }
 
@@ -546,6 +548,10 @@ public:
 
     const std::string* tagName() const {
         return tagName_.get();
+    }
+
+    nebula::cpp2::KeyType keyType() const {
+        return keyType_;
     }
 
     std::vector<std::string> names() const {
@@ -561,6 +567,7 @@ private:
     std::unique_ptr<std::string>                indexName_;
     std::unique_ptr<std::string>                tagName_;
     std::unique_ptr<ColumnNameList>             columns_;
+    nebula::cpp2::KeyType                       keyType_{nebula::cpp2::KeyType::MUL};
 };
 
 
@@ -569,11 +576,13 @@ public:
     CreateEdgeIndexSentence(std::string *indexName,
                             std::string *edgeName,
                             ColumnNameList *columns,
-                            bool ifNotExists)
+                            bool ifNotExists,
+                            nebula::cpp2::KeyType keyType)
         : CreateSentence(ifNotExists) {
         indexName_.reset(indexName);
         edgeName_.reset(edgeName);
         columns_.reset(columns);
+        keyType_ = keyType;
         kind_ = Kind::kCreateEdgeIndex;
     }
 
@@ -585,6 +594,10 @@ public:
 
     const std::string* edgeName() const {
         return edgeName_.get();
+    }
+
+    nebula::cpp2::KeyType keyType() const {
+        return keyType_;
     }
 
     std::vector<std::string> names() const {
@@ -600,6 +613,7 @@ private:
     std::unique_ptr<std::string>                indexName_;
     std::unique_ptr<std::string>                edgeName_;
     std::unique_ptr<ColumnNameList>             columns_;
+    nebula::cpp2::KeyType                       keyType_{nebula::cpp2::KeyType::MUL};
 };
 
 

@@ -425,11 +425,13 @@ struct HBReq {
 }
 
 struct CreateTagIndexReq {
-    1: common.GraphSpaceID  space_id,
-    2: string               index_name,
-    3: string               tag_name,
-    4: list<string>         fields,
-    5: bool                 if_not_exists,
+    1: common.GraphSpaceID      space_id,
+    2: string                   index_name,
+    3: string                   tag_name,
+    4: list<string>             fields,
+    5: bool                     if_not_exists,
+    // CC(shylock) optional only for compatible
+    6: optional common.KeyType  key_type,
 }
 
 struct DropTagIndexReq {
@@ -460,11 +462,13 @@ struct ListTagIndexesResp {
 }
 
 struct CreateEdgeIndexReq {
-    1: common.GraphSpaceID  space_id,
-    2: string               index_name,
-    3: string               edge_name,
-    4: list<string>         fields,
-    5: bool                 if_not_exists,
+    1: common.GraphSpaceID      space_id,
+    2: string                   index_name,
+    3: string                   edge_name,
+    4: list<string>             fields,
+    5: bool                     if_not_exists,
+    // CC(shylock) optional only for compatible
+    6: optional common.KeyType  key_type,
 }
 
 struct DropEdgeIndexReq {

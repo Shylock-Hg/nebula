@@ -36,7 +36,8 @@ void CreateTagIndexExecutor::execute() {
                                      *name,
                                      *tagName,
                                      columns,
-                                     sentence_->isIfNotExist());
+                                     sentence_->isIfNotExist(),
+                                     sentence_->keyType());
     auto *runner = ectx()->rctx()->runner();
     auto cb = [this] (auto &&resp) {
         if (!resp.ok()) {

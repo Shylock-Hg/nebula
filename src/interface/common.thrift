@@ -72,6 +72,11 @@ union Value {
     5: i64     timestamp;
 }
 
+enum KeyType {
+    UNI   = 0,
+    MUL   = 1,
+} (cpp.enum_strict)
+
 struct ColumnDef {
     1: required string name,
     2: required ValueType type,
@@ -99,6 +104,8 @@ struct IndexItem {
     3: SchemaID            schema_id
     4: string              schema_name,
     5: list<ColumnDef>     fields,
+    // CC(shylock) optional for compatible
+    6: optional KeyType    key_type,
 }
 
 struct HostAddr {

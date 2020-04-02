@@ -277,7 +277,8 @@ public:
                    std::string indexName,
                    std::string tagName,
                    std::vector<std::string> fields,
-                   bool ifNotExists = false);
+                   bool ifNotExists = false,
+                   nebula::cpp2::KeyType keyType = nebula::cpp2::KeyType::MUL);
 
     // Remove the define of tag index
     folly::Future<StatusOr<bool>>
@@ -300,7 +301,8 @@ public:
                     std::string indexName,
                     std::string edgeName,
                     std::vector<std::string> fields,
-                    bool ifNotExists = false);
+                    bool ifNotExists = false,
+                    nebula::cpp2::KeyType keyType = nebula::cpp2::KeyType::MUL);
 
     // Remove the define of edge index
     folly::Future<StatusOr<bool>>

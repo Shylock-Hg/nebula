@@ -806,7 +806,14 @@ void ShowExecutor::showCreateTagIndex() {
 
         std::string buf;
         buf.reserve(256);
-        buf += folly::stringPrintf("CREATE TAG INDEX %s ON ", tagName->c_str());
+        buf += "CREATE TAG ";
+        switch (*DCHECK_NOTNULL(indexItems.get_key_type())) {
+        case nebula::cpp2::KeyType::MUL:
+            break;
+        case nebula::cpp2::KeyType::UNI:
+            buf += "UNIQUE ";
+        }
+        buf += folly::stringPrintf("INDEX %s ON ", tagName->c_str());
 
         auto& fields = indexItems.get_fields();
         buf += indexItems.get_schema_name();
@@ -865,7 +872,14 @@ void ShowExecutor::showCreateEdgeIndex() {
 
         std::string buf;
         buf.reserve(256);
-        buf += folly::stringPrintf("CREATE EDGE INDEX %s ON ", edgeName->c_str());
+        buf += "CREATE EDGE ";
+        switch (*DCHECK_NOTNULL(indexItems.get_key_type())) {
+        case nebula::cpp2::KeyType::MUL:
+            break;
+        case nebula::cpp2::KeyType::UNI:
+            buf += "UNIQUE ";
+        }
+        buf += folly::stringPrintf("INDEX %s ON ", edgeName->c_str());
 
         auto& fields = indexItems.get_fields();
         buf += indexItems.get_schema_name();
