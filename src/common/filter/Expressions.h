@@ -6,33 +6,30 @@
 #ifndef COMMON_FILTER_EXPRESSIONS_H_
 #define COMMON_FILTER_EXPRESSIONS_H_
 
-#include "base/Base.h"
-#include "base/StatusOr.h"
-#include "base/Status.h"
-#include "storage/client/StorageClient.h"
-#include <boost/variant.hpp>
 #include <folly/futures/Future.h>
+#include <boost/variant.hpp>
+#include "base/Base.h"
+#include "base/Status.h"
+#include "base/StatusOr.h"
+#include "storage/client/StorageClient.h"
 
 namespace nebula {
 
 class Cord;
 using OptVariantType = StatusOr<VariantType>;
 
-enum class ColumnType {
-    INT, STRING, DOUBLE, BOOL, TIMESTAMP,
-};
-
-std::string columnTypeToString(ColumnType type);
-
+std::string columnTypeToString(nebula::cpp2::Value::Type type);
 
 struct Getters {
-    std::function<OptVariantType()>                                       getEdgeRank;
-    std::function<OptVariantType(const std::string&)>                     getInputProp;
-    std::function<OptVariantType(const std::string&)>                     getVariableProp;
-    std::function<OptVariantType(const std::string&, const std::string&)> getSrcTagProp;
-    std::function<OptVariantType(const std::string&, const std::string&)> getDstTagProp;
-    std::function<OptVariantType(const std::string&, const std::string&)> getAliasProp;
-    std::function<OptVariantType(const std::string&)>                     getEdgeDstId;
+    std::function<OptVariantType()> getEdgeRank;
+    std::function<OptVariantType(const std::string & /*PropName*/)> getInputProp;
+    std::function<OptVariantType(const std::string & /*PropName*/)> getVariableProp;
+    std::function<OptVariantType(const std::string & /*TagName*/, const std::string & /*PropName*/)>
+        getSrcTagProp;
+    std::function<OptVariantType(const std::string & /*TagName*/, const std::string & /*PropName*/)>
+        getDstTagProp;
+    std::function<OptVariantType(const std::string & /**/, const std::string &)> getAliasProp;
+    std::function<OptVariantType(const std::string &)> getEdgeDstId;
 };
 
 class ExpressionContext final {
@@ -48,11 +45,11 @@ public:
         dstTagProps_.emplace(tag, prop);
     }
 
-    std::unordered_map<std::string, EdgeType>& getEdgeMap() {
+    std::unordered_map<std::string, EdgeType> &getEdgeMap() {
         return edgeMap_;
     }
 
-    std::unordered_map<std::string, TagID>& getTagMap() {
+    std::unordered_map<std::string, TagID> &getTagMap() {
         return tagMap_;
     }
 
@@ -99,7 +96,7 @@ public:
         return true;
     }
 
-    std::vector<std::string>& getEdgeAlias() {
+    std::vector<std::string> &getEdgeAlias() {
         return edgeAlias_;
     }
 
@@ -123,7 +120,7 @@ public:
         return std::vector<VariableProp>(variableProps_.begin(), variableProps_.end());
     }
 
-    const std::unordered_set<std::string>& variables() const {
+    const std::unordered_set<std::string> &variables() const {
         return variables_;
     }
 
@@ -155,10 +152,9 @@ public:
         storageClient_ = storageClient;
     }
 
-    nebula::storage::StorageClient* storageClient() {
+    nebula::storage::StorageClient *storageClient() {
         return storageClient_;
     }
-
 
     void setSpace(GraphSpaceID space) {
         space_ = space;
@@ -170,26 +166,29 @@ public:
 
     void print() const;
 
-    bool isOverAllEdge() const { return overAll_; }
+    bool isOverAllEdge() const {
+        return overAll_;
+    }
 
-    void setOverAllEdge() { overAll_ = true; }
+    void setOverAllEdge() {
+        overAll_ = true;
+    }
 
 private:
-    std::unordered_set<PropPair>              srcTagProps_;
-    std::unordered_set<PropPair>              dstTagProps_;
-    std::unordered_set<PropPair>              aliasProps_;
-    std::unordered_set<VariableProp>          variableProps_;
-    std::unordered_set<std::string>           variables_;
-    std::unordered_set<std::string>           inputProps_;
+    std::unordered_set<PropPair> srcTagProps_;
+    std::unordered_set<PropPair> dstTagProps_;
+    std::unordered_set<PropPair> aliasProps_;
+    std::unordered_set<VariableProp> variableProps_;
+    std::unordered_set<std::string> variables_;
+    std::unordered_set<std::string> inputProps_;
     // alias => edgeType
     std::unordered_map<std::string, EdgeType> edgeMap_;
-    std::unordered_map<std::string, TagID>    tagMap_;
-    std::vector<std::string>                  edgeAlias_;
-    bool                                      overAll_{false};
-    GraphSpaceID                              space_;
-    nebula::storage::StorageClient            *storageClient_{nullptr};
+    std::unordered_map<std::string, TagID> tagMap_;
+    std::vector<std::string> edgeAlias_;
+    bool overAll_{false};
+    GraphSpaceID space_;
+    nebula::storage::StorageClient *storageClient_{nullptr};
 };
-
 
 class Expression {
 public:
@@ -273,7 +272,7 @@ public:
         return false;
     }
 
-    static const std::string& asString(const VariantType &value) {
+    static const std::string &asString(const VariantType &value) {
         return boost::get<std::string>(value);
     }
 
@@ -420,24 +419,21 @@ private:
      * Return a pointer to where the decoding consumed up.
      * Throw a Status if any error happened.
      */
-    virtual const char* decode(const char *pos, const char *end) = 0;
-
+    virtual const char *decode(const char *pos, const char *end) = 0;
 
 protected:
-    ExpressionContext                          *context_{nullptr};
-    Kind                                        kind_{kUnknown};
+    ExpressionContext *context_{nullptr};
+    Kind kind_{kUnknown};
 };
 
 // Alias.any_prop_name, i.e. EdgeName.any_prop_name
-class AliasPropertyExpression: public Expression {
+class AliasPropertyExpression : public Expression {
 public:
     AliasPropertyExpression() {
         kind_ = kAliasProp;
     }
 
-    AliasPropertyExpression(std::string *ref,
-                            std::string *alias,
-                            std::string *prop) {
+    AliasPropertyExpression(std::string *ref, std::string *alias, std::string *prop) {
         kind_ = kAliasProp;
         ref_.reset(ref);
         alias_.reset(alias);
@@ -450,22 +446,22 @@ public:
 
     Status MUST_USE_RESULT prepare() override;
 
-    std::string* alias() const {
+    std::string *alias() const {
         return alias_.get();
     }
 
-    std::string* prop() const {
+    std::string *prop() const {
         return prop_.get();
     }
 
 private:
     void encode(Cord &cord) const override;
-    const char* decode(const char *pos, const char *end) override;
+    const char *decode(const char *pos, const char *end) override;
 
 protected:
-    std::unique_ptr<std::string>    ref_;
-    std::unique_ptr<std::string>    alias_;
-    std::unique_ptr<std::string>    prop_;
+    std::unique_ptr<std::string> ref_;
+    std::unique_ptr<std::string> alias_;
+    std::unique_ptr<std::string> prop_;
 };
 
 // $-.any_prop_name or $-
@@ -482,7 +478,6 @@ public:
     Status MUST_USE_RESULT prepare() override;
 };
 
-
 // $$.TagName.any_prop_name
 class DestPropertyExpression final : public AliasPropertyExpression {
 public:
@@ -497,7 +492,6 @@ public:
     Status MUST_USE_RESULT prepare() override;
 };
 
-
 // $VarName.any_prop_name
 class VariablePropertyExpression final : public AliasPropertyExpression {
 public:
@@ -511,7 +505,6 @@ public:
 
     Status MUST_USE_RESULT prepare() override;
 };
-
 
 // Alias._type, i.e. EdgeName._type
 class EdgeTypeExpression final : public AliasPropertyExpression {
@@ -532,7 +525,6 @@ public:
     Status MUST_USE_RESULT prepare() override;
 };
 
-
 // Alias._src, i.e. EdgeName._src
 class EdgeSrcIdExpression final : public AliasPropertyExpression {
 public:
@@ -551,7 +543,6 @@ public:
 
     Status MUST_USE_RESULT prepare() override;
 };
-
 
 // Alias._dst, i.e. EdgeName._dst
 class EdgeDstIdExpression final : public AliasPropertyExpression {
@@ -572,7 +563,6 @@ public:
     Status MUST_USE_RESULT prepare() override;
 };
 
-
 // Alias._rank, i.e. EdgeName._rank
 class EdgeRankExpression final : public AliasPropertyExpression {
 public:
@@ -592,7 +582,6 @@ public:
     Status MUST_USE_RESULT prepare() override;
 };
 
-
 // $^.TagName.any_prop_name
 class SourcePropertyExpression final : public AliasPropertyExpression {
 public:
@@ -606,7 +595,6 @@ public:
 
     Status MUST_USE_RESULT prepare() override;
 };
-
 
 // literal constants: bool, integer, double, string
 class PrimaryExpression final : public Expression {
@@ -644,12 +632,11 @@ public:
 private:
     void encode(Cord &cord) const override;
 
-    const char* decode(const char *pos, const char *end) override;
+    const char *decode(const char *pos, const char *end) override;
 
 private:
-    VariantType                                 operand_;
+    VariantType operand_;
 };
-
 
 class ArgumentList final {
 public:
@@ -662,9 +649,8 @@ public:
     }
 
 private:
-    std::vector<std::unique_ptr<Expression>>    args_;
+    std::vector<std::unique_ptr<Expression>> args_;
 };
-
 
 class FunctionCallExpression final : public Expression {
 public:
@@ -681,14 +667,14 @@ public:
         }
     }
 
-    const std::string* name() const {
+    const std::string *name() const {
         return name_.get();
     }
 
-    const std::vector<Expression*> args() const {
-        std::vector<Expression*> args;
-        std::transform(args_.begin(), args_.end(), std::back_inserter(args),
-                [] (auto &e) { return e.get(); } );
+    const std::vector<Expression *> args() const {
+        std::vector<Expression *> args;
+        std::transform(
+            args_.begin(), args_.end(), std::back_inserter(args), [](auto &e) { return e.get(); });
         return args;
     }
 
@@ -705,19 +691,19 @@ public:
         }
     }
 
-    void setFunc(std::function<VariantType(const std::vector<VariantType>&)> func) {
+    void setFunc(std::function<VariantType(const std::vector<VariantType> &)> func) {
         function_ = func;
     }
 
 private:
     void encode(Cord &cord) const override;
 
-    const char* decode(const char *pos, const char *end) override;
+    const char *decode(const char *pos, const char *end) override;
 
 private:
-    std::unique_ptr<std::string>                name_;
-    std::vector<std::unique_ptr<Expression>>    args_;
-    std::function<VariantType(const std::vector<VariantType>&)> function_;
+    std::unique_ptr<std::string> name_;
+    std::vector<std::unique_ptr<Expression>> args_;
+    std::function<VariantType(const std::vector<VariantType> &)> function_;
 };
 
 // (uuid)expr
@@ -747,20 +733,18 @@ private:
         throw Status::Error("Not supported yet");
     }
 
-    const char* decode(const char *, const char *) override {
+    const char *decode(const char *, const char *) override {
         throw Status::Error("Not supported yet");
     }
 
 private:
-    std::unique_ptr<std::string>                field_;
+    std::unique_ptr<std::string> field_;
 };
 
 // +expr, -expr, !expr
 class UnaryExpression final : public Expression {
 public:
-    enum Operator : uint8_t {
-        PLUS, NEGATE, NOT
-    };
+    enum Operator : uint8_t { PLUS, NEGATE, NOT };
     static_assert(sizeof(Operator) == sizeof(uint8_t), "");
 
     UnaryExpression() {
@@ -784,20 +768,19 @@ public:
         operand_->setContext(context);
     }
 
-    const Expression* operand() const {
+    const Expression *operand() const {
         return operand_.get();
     }
 
 private:
     void encode(Cord &cord) const override;
 
-    const char* decode(const char *pos, const char *end) override;
+    const char *decode(const char *pos, const char *end) override;
 
 private:
-    Operator                                    op_;
-    std::unique_ptr<Expression>                 operand_;
+    Operator op_;
+    std::unique_ptr<Expression> operand_;
 };
-
 
 // (type)expr
 class TypeCastingExpression final : public Expression {
@@ -806,7 +789,7 @@ public:
         kind_ = kTypeCasting;
     }
 
-    TypeCastingExpression(ColumnType type, Expression *operand) {
+    TypeCastingExpression(nebula::cpp2::Value::Type type, Expression *operand) {
         kind_ = kTypeCasting;
         type_ = type;
         operand_.reset(operand);
@@ -823,33 +806,30 @@ public:
         operand_->setContext(context);
     }
 
-    const Expression* operand() const {
+    const Expression *operand() const {
         return operand_.get();
     }
 
-    ColumnType getType() const {
+    nebula::cpp2::Value::Type getType() const {
         return type_;
     }
 
 private:
     void encode(Cord &cord) const override;
 
-    const char* decode(const char *, const char *) override {
+    const char *decode(const char *, const char *) override {
         throw Status::Error("Not supported yet");
     }
 
 private:
-    ColumnType                                  type_;
-    std::unique_ptr<Expression>                 operand_;
+    nebula::cpp2::Value::Type type_;
+    std::unique_ptr<Expression> operand_;
 };
-
 
 // +, -, *, /, %
 class ArithmeticExpression final : public Expression {
 public:
-    enum Operator : uint8_t {
-        ADD, SUB, MUL, DIV, MOD, XOR
-    };
+    enum Operator : uint8_t { ADD, SUB, MUL, DIV, MOD, XOR };
     static_assert(sizeof(Operator) == sizeof(uint8_t), "");
 
     ArithmeticExpression() {
@@ -875,32 +855,29 @@ public:
         right_->setContext(context);
     }
 
-    const Expression* left() const {
+    const Expression *left() const {
         return left_.get();
     }
 
-    const Expression* right() const {
+    const Expression *right() const {
         return right_.get();
     }
 
 private:
     void encode(Cord &cord) const override;
 
-    const char* decode(const char *pos, const char *end) override;
+    const char *decode(const char *pos, const char *end) override;
 
 private:
-    Operator                                    op_;
-    std::unique_ptr<Expression>                 left_;
-    std::unique_ptr<Expression>                 right_;
+    Operator op_;
+    std::unique_ptr<Expression> left_;
+    std::unique_ptr<Expression> right_;
 };
-
 
 // <, <=, >, >=, ==, !=
 class RelationalExpression final : public Expression {
 public:
-    enum Operator : uint8_t {
-        LT, LE, GT, GE, EQ, NE
-    };
+    enum Operator : uint8_t { LT, LE, GT, GE, EQ, NE };
     static_assert(sizeof(Operator) == sizeof(uint8_t), "");
 
     RelationalExpression() {
@@ -926,7 +903,7 @@ public:
         right_->setContext(context);
     }
 
-    const Expression* left() const {
+    const Expression *left() const {
         return left_.get();
     }
 
@@ -934,30 +911,27 @@ public:
         return op_;
     }
 
-    const Expression* right() const {
+    const Expression *right() const {
         return right_.get();
     }
 
 private:
     void encode(Cord &cord) const override;
 
-    const char* decode(const char *pos, const char *end) override;
+    const char *decode(const char *pos, const char *end) override;
 
     Status implicitCasting(VariantType &lhs, VariantType &rhs) const;
 
 private:
-    Operator                                    op_;
-    std::unique_ptr<Expression>                 left_;
-    std::unique_ptr<Expression>                 right_;
+    Operator op_;
+    std::unique_ptr<Expression> left_;
+    std::unique_ptr<Expression> right_;
 };
-
 
 // &&, ||
 class LogicalExpression final : public Expression {
 public:
-    enum Operator : uint8_t {
-        AND, OR, XOR
-    };
+    enum Operator : uint8_t { AND, OR, XOR };
     static_assert(sizeof(Operator) == sizeof(uint8_t), "");
 
     LogicalExpression() {
@@ -995,24 +969,24 @@ public:
         return op_;
     }
 
-    const Expression* left() const {
+    const Expression *left() const {
         return left_.get();
     }
 
-    const Expression* right() const {
+    const Expression *right() const {
         return right_.get();
     }
 
 private:
     void encode(Cord &cord) const override;
 
-    const char* decode(const char *pos, const char *end) override;
+    const char *decode(const char *pos, const char *end) override;
 
 private:
-    Operator                                    op_;
-    std::unique_ptr<Expression>                 left_;
-    std::unique_ptr<Expression>                 right_;
+    Operator op_;
+    std::unique_ptr<Expression> left_;
+    std::unique_ptr<Expression> right_;
 };
 }   // namespace nebula
 
-#endif  // COMMON_FILTER_EXPRESSIONS_H_
+#endif   // COMMON_FILTER_EXPRESSIONS_H_

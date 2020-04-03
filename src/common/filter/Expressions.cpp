@@ -5,19 +5,21 @@
  * attached with Common Clause Condition 1.0, found in the LICENSES directory.
  */
 
+#include "filter/Expressions.h"
 #include "base/Base.h"
 #include "base/Cord.h"
-#include "filter/Expressions.h"
 #include "filter/FunctionManager.h"
 
-
-#define THROW_IF_NO_SPACE(POS, END, REQUIRE)                                        \
-    do {                                                                            \
-        if ((POS) + (REQUIRE) > (END)) {                                            \
-            throw Status::Error("Not enough space left, left: %lu bytes, "          \
-                                "require: %lu bytes, at: %s:%d", (END) - (POS),     \
-                                (REQUIRE), __FILE__, __LINE__);                     \
-        }                                                                           \
+#define THROW_IF_NO_SPACE(POS, END, REQUIRE)                                                       \
+    do {                                                                                           \
+        if ((POS) + (REQUIRE) > (END)) {                                                           \
+            throw Status::Error("Not enough space left, left: %lu bytes, "                         \
+                                "require: %lu bytes, at: %s:%d",                                   \
+                                (END) - (POS),                                                     \
+                                (REQUIRE),                                                         \
+                                __FILE__,                                                          \
+                                __LINE__);                                                         \
+        }                                                                                          \
     } while (false)
 
 namespace nebula {
@@ -45,7 +47,6 @@ void Expression::print(const VariantType &value) {
             break;
     }
 }
-
 
 std::unique_ptr<Expression> Expression::makeExpr(uint8_t kind) {
     switch (intToKind(kind)) {
@@ -88,7 +89,6 @@ std::unique_ptr<Expression> Expression::makeExpr(uint8_t kind) {
     }
 }
 
-
 // static
 std::string Expression::encode(Expression *expr) noexcept {
     Cord cord(1024);
@@ -96,15 +96,13 @@ std::string Expression::encode(Expression *expr) noexcept {
     return cord.str();
 }
 
-
 // static
-StatusOr<std::unique_ptr<Expression>>
-Expression::decode(folly::StringPiece buffer) noexcept {
+StatusOr<std::unique_ptr<Expression>> Expression::decode(folly::StringPiece buffer) noexcept {
     auto *pos = buffer.data();
     auto *end = pos + buffer.size();
     try {
         THROW_IF_NO_SPACE(pos, end, 1UL);
-        auto expr = makeExpr(*reinterpret_cast<const uint8_t*>(pos++));
+        auto expr = makeExpr(*reinterpret_cast<const uint8_t *>(pos++));
         pos = expr->decode(pos, end);
         if (pos != end) {
             return Status::Error("Buffer not consumed up, end: %p, used upto: %p", end, pos);
@@ -158,10 +156,10 @@ void AliasPropertyExpression::encode(Cord &cord) const {
     cord << *prop_;
 }
 
-const char* AliasPropertyExpression::decode(const char *pos, const char *end) {
+const char *AliasPropertyExpression::decode(const char *pos, const char *end) {
     {
         THROW_IF_NO_SPACE(pos, end, 2UL);
-        auto size = *reinterpret_cast<const uint16_t*>(pos);
+        auto size = *reinterpret_cast<const uint16_t *>(pos);
         pos += 2;
 
         THROW_IF_NO_SPACE(pos, end, static_cast<uint64_t>(size));
@@ -170,7 +168,7 @@ const char* AliasPropertyExpression::decode(const char *pos, const char *end) {
     }
     {
         THROW_IF_NO_SPACE(pos, end, 2UL);
-        auto size = *reinterpret_cast<const uint16_t*>(pos);
+        auto size = *reinterpret_cast<const uint16_t *>(pos);
         pos += 2;
 
         THROW_IF_NO_SPACE(pos, end, static_cast<uint64_t>(size));
@@ -179,7 +177,7 @@ const char* AliasPropertyExpression::decode(const char *pos, const char *end) {
     }
     {
         THROW_IF_NO_SPACE(pos, end, 2UL);
-        auto size = *reinterpret_cast<const uint16_t*>(pos);
+        auto size = *reinterpret_cast<const uint16_t *>(pos);
         pos += 2;
 
         THROW_IF_NO_SPACE(pos, end, static_cast<uint64_t>(size));
@@ -202,14 +200,12 @@ Status InputPropertyExpression::prepare() {
     return Status::OK();
 }
 
-
 OptVariantType InputPropertyExpression::eval(Getters &getters) const {
     if (getters.getInputProp == nullptr) {
         return Status::Error("`getInputProp' function is not implemented");
     }
     return getters.getInputProp(*prop_);
 }
-
 
 DestPropertyExpression::DestPropertyExpression(std::string *tag, std::string *prop) {
     kind_ = kDestProp;
@@ -225,12 +221,10 @@ OptVariantType DestPropertyExpression::eval(Getters &getters) const {
     return getters.getDstTagProp(*alias_, *prop_);
 }
 
-
 Status DestPropertyExpression::prepare() {
     context_->addDstTagProp(*alias_, *prop_);
     return Status::OK();
 }
-
 
 VariablePropertyExpression::VariablePropertyExpression(std::string *var, std::string *prop) {
     kind_ = kVariableProp;
@@ -263,7 +257,6 @@ Status EdgeTypeExpression::prepare() {
     return Status::OK();
 }
 
-
 OptVariantType EdgeSrcIdExpression::eval(Getters &getters) const {
     if (getters.getAliasProp == nullptr) {
         return Status::Error("`getAliasProp' function is not implemented");
@@ -271,12 +264,10 @@ OptVariantType EdgeSrcIdExpression::eval(Getters &getters) const {
     return getters.getAliasProp(*alias_, *prop_);
 }
 
-
 Status EdgeSrcIdExpression::prepare() {
     context_->addAliasProp(*alias_, *prop_);
     return Status::OK();
 }
-
 
 OptVariantType EdgeDstIdExpression::eval(Getters &getters) const {
     if (getters.getEdgeDstId == nullptr) {
@@ -290,7 +281,6 @@ Status EdgeDstIdExpression::prepare() {
     return Status::OK();
 }
 
-
 OptVariantType EdgeRankExpression::eval(Getters &getters) const {
     if (getters.getAliasProp == nullptr) {
         return Status::Error("`getAliasProp' function is not implemented");
@@ -298,12 +288,10 @@ OptVariantType EdgeRankExpression::eval(Getters &getters) const {
     return getters.getAliasProp(*alias_, *prop_);
 }
 
-
 Status EdgeRankExpression::prepare() {
     context_->addAliasProp(*alias_, *prop_);
     return Status::OK();
 }
-
 
 SourcePropertyExpression::SourcePropertyExpression(std::string *tag, std::string *prop) {
     kind_ = kSourceProp;
@@ -313,18 +301,16 @@ SourcePropertyExpression::SourcePropertyExpression(std::string *tag, std::string
 }
 
 OptVariantType SourcePropertyExpression::eval(Getters &getters) const {
-    if (getters.getSrcTagProp== nullptr) {
+    if (getters.getSrcTagProp == nullptr) {
         return Status::Error("`getSrcTagProp' function is not implemented");
     }
     return getters.getSrcTagProp(*alias_, *prop_);
 }
 
-
 Status SourcePropertyExpression::prepare() {
     context_->addSrcTagProp(*alias_, *prop_);
     return Status::OK();
 }
-
 
 std::string PrimaryExpression::toString() const {
     char buf[1024];
@@ -370,7 +356,6 @@ Status PrimaryExpression::prepare() {
     return Status::OK();
 }
 
-
 void PrimaryExpression::encode(Cord &cord) const {
     cord << kindToInt(kind());
     uint8_t which = operand_.which();
@@ -396,28 +381,27 @@ void PrimaryExpression::encode(Cord &cord) const {
     }
 }
 
-
-const char* PrimaryExpression::decode(const char *pos, const char *end) {
+const char *PrimaryExpression::decode(const char *pos, const char *end) {
     THROW_IF_NO_SPACE(pos, end, 1UL);
-    auto which = *reinterpret_cast<const uint8_t*>(pos++);
+    auto which = *reinterpret_cast<const uint8_t *>(pos++);
     switch (which) {
         case VAR_INT64:
             THROW_IF_NO_SPACE(pos, end, 8UL);
-            operand_ = *reinterpret_cast<const int64_t*>(pos);
+            operand_ = *reinterpret_cast<const int64_t *>(pos);
             pos += 8;
             break;
         case VAR_DOUBLE:
             THROW_IF_NO_SPACE(pos, end, 8UL);
-            operand_ = *reinterpret_cast<const double*>(pos);
+            operand_ = *reinterpret_cast<const double *>(pos);
             pos += 8;
             break;
         case VAR_BOOL:
             THROW_IF_NO_SPACE(pos, end, 1UL);
-            operand_ = *reinterpret_cast<const bool*>(pos++);
+            operand_ = *reinterpret_cast<const bool *>(pos++);
             break;
         case VAR_STR: {
             THROW_IF_NO_SPACE(pos, end, 2UL);
-            auto size = *reinterpret_cast<const uint16_t*>(pos);
+            auto size = *reinterpret_cast<const uint16_t *>(pos);
             pos += 2;
             THROW_IF_NO_SPACE(pos, end, static_cast<uint64_t>(size));
             operand_ = std::string(pos, size);
@@ -429,7 +413,6 @@ const char* PrimaryExpression::decode(const char *pos, const char *end) {
     }
     return pos;
 }
-
 
 std::string FunctionCallExpression::toString() const {
     std::string buf;
@@ -481,7 +464,6 @@ Status FunctionCallExpression::prepare() {
     return status;
 }
 
-
 void FunctionCallExpression::encode(Cord &cord) const {
     cord << kindToInt(kind());
 
@@ -494,23 +476,22 @@ void FunctionCallExpression::encode(Cord &cord) const {
     }
 }
 
-
-const char* FunctionCallExpression::decode(const char *pos, const char *end) {
+const char *FunctionCallExpression::decode(const char *pos, const char *end) {
     THROW_IF_NO_SPACE(pos, end, 2UL);
-    auto size = *reinterpret_cast<const uint16_t*>(pos);
+    auto size = *reinterpret_cast<const uint16_t *>(pos);
     pos += 2;
 
     THROW_IF_NO_SPACE(pos, end, static_cast<uint64_t>(size));
     name_ = std::make_unique<std::string>(pos, size);
     pos += size;
 
-    auto count = *reinterpret_cast<const uint16_t*>(pos);
+    auto count = *reinterpret_cast<const uint16_t *>(pos);
     pos += 2;
 
     args_.reserve(count);
     for (auto i = 0u; i < count; i++) {
         THROW_IF_NO_SPACE(pos, end, 1UL);
-        auto arg = makeExpr(*reinterpret_cast<const uint8_t*>(pos++));
+        auto arg = makeExpr(*reinterpret_cast<const uint8_t *>(pos++));
         pos = arg->decode(pos, end);
         args_.emplace_back(std::move(arg));
     }
@@ -523,21 +504,21 @@ std::string UUIDExpression::toString() const {
 
 OptVariantType UUIDExpression::eval(Getters &getters) const {
     UNUSED(getters);
-     auto client = context_->storageClient();
-     auto space = context_->space();
-     auto uuidResult = client->getUUID(space, *field_).get();
-     if (!uuidResult.ok()) {
+    auto client = context_->storageClient();
+    auto space = context_->space();
+    auto uuidResult = client->getUUID(space, *field_).get();
+    if (!uuidResult.ok()) {
         LOG(ERROR) << "Get UUID failed for " << toString() << ", status " << uuidResult.status();
         return OptVariantType(Status::Error("Get UUID Failed"));
-     }
-     auto v = std::move(uuidResult).value();
-     for (auto& rc : v.get_result().get_failed_codes()) {
-        LOG(ERROR) << "Get UUID failed, error " << static_cast<int32_t>(rc.get_code())
-                   << ", part " << rc.get_part_id() << ", str id " << toString();
+    }
+    auto v = std::move(uuidResult).value();
+    for (auto &rc : v.get_result().get_failed_codes()) {
+        LOG(ERROR) << "Get UUID failed, error " << static_cast<int32_t>(rc.get_code()) << ", part "
+                   << rc.get_part_id() << ", str id " << toString();
         return OptVariantType(Status::Error("Get UUID Failed"));
-     }
-     VLOG(3) << "Get UUID from " << *field_ << " to " << v.get_id();
-     return v.get_id();
+    }
+    VLOG(3) << "Get UUID from " << *field_ << " to " << v.get_id();
+    return v.get_id();
 }
 
 Status UUIDExpression::prepare() {
@@ -580,15 +561,14 @@ OptVariantType UnaryExpression::eval(Getters &getters) const {
         }
     }
 
-    return OptVariantType(Status::Error(folly::sformat(
-        "attempt to perform unary arithmetic on a `{}'",
-        VARIANT_TYPE_NAME[value.value().which()])));
+    return OptVariantType(
+        Status::Error(folly::sformat("attempt to perform unary arithmetic on a `{}'",
+                                     VARIANT_TYPE_NAME[value.value().which()])));
 }
 
 Status UnaryExpression::prepare() {
     return operand_->prepare();
 }
-
 
 void UnaryExpression::encode(Cord &cord) const {
     cord << kindToInt(kind());
@@ -596,34 +576,31 @@ void UnaryExpression::encode(Cord &cord) const {
     operand_->encode(cord);
 }
 
-
-const char* UnaryExpression::decode(const char *pos, const char *end) {
+const char *UnaryExpression::decode(const char *pos, const char *end) {
     THROW_IF_NO_SPACE(pos, end, 2UL);
-    op_ = *reinterpret_cast<const Operator*>(pos++);
+    op_ = *reinterpret_cast<const Operator *>(pos++);
     DCHECK(op_ == PLUS || op_ == NEGATE || op_ == NOT);
 
-    operand_ = makeExpr(*reinterpret_cast<const uint8_t*>(pos++));
+    operand_ = makeExpr(*reinterpret_cast<const uint8_t *>(pos++));
     return operand_->decode(pos, end);
 }
 
-
-std::string columnTypeToString(ColumnType type) {
+std::string columnTypeToString(nebula::cpp2::Value::Type type) {
     switch (type) {
-        case ColumnType::INT:
+        case nebula::cpp2::Value::Type::int_value:
             return "int";
-        case ColumnType::STRING:
-            return "string";
-        case ColumnType::DOUBLE:
-            return "double";
-        case ColumnType::BOOL:
+        case nebula::cpp2::Value::Type::bool_value:
             return "bool";
-        case ColumnType::TIMESTAMP:
-            return  "timestamp";
+        case nebula::cpp2::Value::Type::double_value:
+            return "double";
+        case nebula::cpp2::Value::Type::string_value:
+            return "string";
+        case nebula::cpp2::Value::Type::timestamp:
+            return "timestamp";
         default:
             return "unknown";
     }
 }
-
 
 std::string TypeCastingExpression::toString() const {
     std::string buf;
@@ -637,7 +614,6 @@ std::string TypeCastingExpression::toString() const {
     return buf;
 }
 
-
 OptVariantType TypeCastingExpression::eval(Getters &getters) const {
     auto result = operand_->eval(getters);
     if (!result.ok()) {
@@ -645,28 +621,26 @@ OptVariantType TypeCastingExpression::eval(Getters &getters) const {
     }
 
     switch (type_) {
-        case ColumnType::INT:
-        case ColumnType::TIMESTAMP:
+        case nebula::cpp2::Value::Type::int_value:
+        case nebula::cpp2::Value::Type::timestamp:
             return Expression::toInt(result.value());
-        case ColumnType::STRING:
+        case nebula::cpp2::Value::Type::string_value:
             return Expression::toString(result.value());
-        case ColumnType::DOUBLE:
+        case nebula::cpp2::Value::Type::double_value:
             return Expression::toDouble(result.value());
-        case ColumnType::BOOL:
+        case nebula::cpp2::Value::Type::bool_value:
             return Expression::toBool(result.value());
+        case nebula::cpp2::Value::Type::__EMPTY__:
+            break;
     }
     LOG(FATAL) << "casting to unknown type: " << static_cast<int>(type_);
 }
-
 
 Status TypeCastingExpression::prepare() {
     return operand_->prepare();
 }
 
-
-void TypeCastingExpression::encode(Cord &) const {
-}
-
+void TypeCastingExpression::encode(Cord &) const {}
 
 std::string ArithmeticExpression::toString() const {
     std::string buf;
@@ -715,7 +689,7 @@ OptVariantType ArithmeticExpression::eval(Getters &getters) const {
     static constexpr int64_t maxInt = std::numeric_limits<int64_t>::max();
     static constexpr int64_t minInt = std::numeric_limits<int64_t>::min();
 
-    auto isAddOverflow = [] (int64_t lv, int64_t rv) -> bool {
+    auto isAddOverflow = [](int64_t lv, int64_t rv) -> bool {
         if (lv >= 0 && rv >= 0) {
             return maxInt - lv < rv;
         } else if (lv < 0 && rv < 0) {
@@ -725,7 +699,7 @@ OptVariantType ArithmeticExpression::eval(Getters &getters) const {
         }
     };
 
-    auto isSubOverflow = [] (int64_t lv, int64_t rv) -> bool {
+    auto isSubOverflow = [](int64_t lv, int64_t rv) -> bool {
         if (lv > 0 && rv < 0) {
             return maxInt - lv < -rv;
         } else if (lv < 0 && rv > 0) {
@@ -735,7 +709,7 @@ OptVariantType ArithmeticExpression::eval(Getters &getters) const {
         }
     };
 
-    auto isMulOverflow = [] (int64_t lv, int64_t rv) -> bool {
+    auto isMulOverflow = [](int64_t lv, int64_t rv) -> bool {
         if (lv > 0 && rv > 0) {
             return maxInt / lv < rv;
         } else if (lv < 0 && rv < 0) {
@@ -758,8 +732,8 @@ OptVariantType ArithmeticExpression::eval(Getters &getters) const {
                 int64_t lValue = asInt(l);
                 int64_t rValue = asInt(r);
                 if (isAddOverflow(lValue, rValue)) {
-                    return Status::Error(folly::stringPrintf("Out of range %ld + %ld",
-                                lValue, rValue));
+                    return Status::Error(
+                        folly::stringPrintf("Out of range %ld + %ld", lValue, rValue));
                 }
                 return OptVariantType(lValue + rValue);
             }
@@ -776,8 +750,8 @@ OptVariantType ArithmeticExpression::eval(Getters &getters) const {
                 int64_t lValue = asInt(l);
                 int64_t rValue = asInt(r);
                 if (isSubOverflow(lValue, rValue)) {
-                    return Status::Error(folly::stringPrintf("Out of range %ld - %ld",
-                                lValue, rValue));
+                    return Status::Error(
+                        folly::stringPrintf("Out of range %ld - %ld", lValue, rValue));
                 }
                 return OptVariantType(lValue - rValue);
             }
@@ -831,8 +805,8 @@ OptVariantType ArithmeticExpression::eval(Getters &getters) const {
         case XOR:
             if (isArithmetic(l) && isArithmetic(r)) {
                 if (isDouble(l) || isDouble(r)) {
-                    return (static_cast<int64_t>(std::round(asDouble(l)))
-                                ^ static_cast<int64_t>(std::round(asDouble(r))));
+                    return (static_cast<int64_t>(std::round(asDouble(l))) ^
+                            static_cast<int64_t>(std::round(asDouble(r))));
                 }
                 return OptVariantType(asInt(l) ^ asInt(r));
             }
@@ -841,9 +815,10 @@ OptVariantType ArithmeticExpression::eval(Getters &getters) const {
             DCHECK(false);
     }
 
-    return OptVariantType(Status::Error(folly::sformat(
-        "attempt to perform arithmetic on `{}' with `{}'",
-        VARIANT_TYPE_NAME[l.which()], VARIANT_TYPE_NAME[r.which()])));
+    return OptVariantType(
+        Status::Error(folly::sformat("attempt to perform arithmetic on `{}' with `{}'",
+                                     VARIANT_TYPE_NAME[l.which()],
+                                     VARIANT_TYPE_NAME[r.which()])));
 }
 
 Status ArithmeticExpression::prepare() {
@@ -858,7 +833,6 @@ Status ArithmeticExpression::prepare() {
     return Status::OK();
 }
 
-
 void ArithmeticExpression::encode(Cord &cord) const {
     cord << kindToInt(kind());
     cord << static_cast<uint8_t>(op_);
@@ -866,20 +840,18 @@ void ArithmeticExpression::encode(Cord &cord) const {
     right_->encode(cord);
 }
 
-
-const char* ArithmeticExpression::decode(const char *pos, const char *end) {
+const char *ArithmeticExpression::decode(const char *pos, const char *end) {
     THROW_IF_NO_SPACE(pos, end, 2UL);
-    op_ = *reinterpret_cast<const Operator*>(pos++);
+    op_ = *reinterpret_cast<const Operator *>(pos++);
     DCHECK(op_ == ADD || op_ == SUB || op_ == MUL || op_ == DIV || op_ == MOD);
 
-    left_ = makeExpr(*reinterpret_cast<const uint8_t*>(pos++));
+    left_ = makeExpr(*reinterpret_cast<const uint8_t *>(pos++));
     pos = left_->decode(pos, end);
 
     THROW_IF_NO_SPACE(pos, end, 1UL);
-    right_ = makeExpr(*reinterpret_cast<const uint8_t*>(pos++));
+    right_ = makeExpr(*reinterpret_cast<const uint8_t *>(pos++));
     return right_->decode(pos, end);
 }
-
 
 std::string RelationalExpression::toString() const {
     std::string buf;
@@ -944,16 +916,14 @@ OptVariantType RelationalExpression::eval(Getters &getters) const {
         case EQ:
             if (isArithmetic(l) && isArithmetic(r)) {
                 if (isDouble(l) || isDouble(r)) {
-                    return OptVariantType(
-                        almostEqual(asDouble(l), asDouble(r)));
+                    return OptVariantType(almostEqual(asDouble(l), asDouble(r)));
                 }
             }
             return OptVariantType(l == r);
         case NE:
             if (isArithmetic(l) && isArithmetic(r)) {
                 if (isDouble(l) || isDouble(r)) {
-                    return OptVariantType(
-                        !almostEqual(asDouble(l), asDouble(r)));
+                    return OptVariantType(!almostEqual(asDouble(l), asDouble(r)));
                 }
             }
             return OptVariantType(l != r);
@@ -994,7 +964,6 @@ Status RelationalExpression::prepare() {
     return Status::OK();
 }
 
-
 void RelationalExpression::encode(Cord &cord) const {
     cord << kindToInt(kind());
     cord << static_cast<uint8_t>(op_);
@@ -1002,20 +971,18 @@ void RelationalExpression::encode(Cord &cord) const {
     right_->encode(cord);
 }
 
-
-const char* RelationalExpression::decode(const char *pos, const char *end) {
+const char *RelationalExpression::decode(const char *pos, const char *end) {
     THROW_IF_NO_SPACE(pos, end, 2UL);
-    op_ = *reinterpret_cast<const Operator*>(pos++);
+    op_ = *reinterpret_cast<const Operator *>(pos++);
     DCHECK(op_ == LT || op_ == LE || op_ == GT || op_ == GE || op_ == EQ || op_ == NE);
 
-    left_ = makeExpr(*reinterpret_cast<const uint8_t*>(pos++));
+    left_ = makeExpr(*reinterpret_cast<const uint8_t *>(pos++));
     pos = left_->decode(pos, end);
 
     THROW_IF_NO_SPACE(pos, end, 1UL);
-    right_ = makeExpr(*reinterpret_cast<const uint8_t*>(pos++));
+    right_ = makeExpr(*reinterpret_cast<const uint8_t *>(pos++));
     return right_->decode(pos, end);
 }
-
 
 std::string LogicalExpression::toString() const {
     std::string buf;
@@ -1084,20 +1051,18 @@ void LogicalExpression::encode(Cord &cord) const {
     right_->encode(cord);
 }
 
-
-const char* LogicalExpression::decode(const char *pos, const char *end) {
+const char *LogicalExpression::decode(const char *pos, const char *end) {
     THROW_IF_NO_SPACE(pos, end, 2UL);
-    op_ = *reinterpret_cast<const Operator*>(pos++);
+    op_ = *reinterpret_cast<const Operator *>(pos++);
     DCHECK(op_ == AND || op_ == OR || op_ == XOR);
 
-    left_ = makeExpr(*reinterpret_cast<const uint8_t*>(pos++));
+    left_ = makeExpr(*reinterpret_cast<const uint8_t *>(pos++));
     pos = left_->decode(pos, end);
 
     THROW_IF_NO_SPACE(pos, end, 1UL);
-    right_ = makeExpr(*reinterpret_cast<const uint8_t*>(pos++));
+    right_ = makeExpr(*reinterpret_cast<const uint8_t *>(pos++));
     return right_->decode(pos, end);
 }
-
 
 #undef THROW_IF_NO_SPACE
 

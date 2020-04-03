@@ -46,7 +46,7 @@ static constexpr size_t MAX_ABS_INTEGER = 9223372036854775808ULL;
     nebula::ColumnSpecification            *colspec;
     nebula::ColumnSpecificationList        *colspeclist;
     nebula::ColumnNameList                 *colsnamelist;
-    nebula::ColumnType                      type;
+    nebula::cpp2::Value::Type               type;
     nebula::StepClause                     *step_clause;
     nebula::StepClause                     *find_path_upto_clause;
     nebula::FromClause                     *from_clause;
@@ -480,11 +480,11 @@ unary_expression
     ;
 
 type_spec
-    : KW_INT { $$ = ColumnType::INT; }
-    | KW_DOUBLE { $$ = ColumnType::DOUBLE; }
-    | KW_STRING { $$ = ColumnType::STRING; }
-    | KW_BOOL { $$ = ColumnType::BOOL; }
-    | KW_TIMESTAMP { $$ = ColumnType::TIMESTAMP; }
+    : KW_INT { $$ = nebula::cpp2::Value::Type::int_value; }
+    | KW_DOUBLE { $$ = nebula::cpp2::Value::Type::double_value; }
+    | KW_STRING { $$ = nebula::cpp2::Value::Type::string_value; }
+    | KW_BOOL { $$ = nebula::cpp2::Value::Type::bool_value; }
+    | KW_TIMESTAMP { $$ = nebula::cpp2::Value::Type::timestamp; }
     ;
 
 arithmetic_xor_expression

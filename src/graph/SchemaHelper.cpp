@@ -4,25 +4,26 @@
  * attached with Common Clause Condition 1.0, found in the LICENSES directory.
  */
 
-#include "base/Base.h"
 #include "graph/SchemaHelper.h"
+#include "base/Base.h"
 #include "graph/Executor.h"
 
 namespace nebula {
 namespace graph {
 
 // static
-nebula::cpp2::SupportedType SchemaHelper::columnTypeToSupportedType(nebula::ColumnType type) {
+nebula::cpp2::SupportedType SchemaHelper::columnTypeToSupportedType(
+    nebula::cpp2::Value::Type type) {
     switch (type) {
-        case nebula::ColumnType::BOOL:
+        case nebula::cpp2::Value::Type::bool_value:
             return nebula::cpp2::SupportedType::BOOL;
-        case nebula::ColumnType::INT:
+        case nebula::cpp2::Value::Type::int_value:
             return nebula::cpp2::SupportedType::INT;
-        case nebula::ColumnType::DOUBLE:
+        case nebula::cpp2::Value::Type::double_value:
             return nebula::cpp2::SupportedType::DOUBLE;
-        case nebula::ColumnType::STRING:
+        case nebula::cpp2::Value::Type::string_value:
             return nebula::cpp2::SupportedType::STRING;
-        case nebula::ColumnType::TIMESTAMP:
+        case nebula::cpp2::Value::Type::timestamp:
             return nebula::cpp2::SupportedType::TIMESTAMP;
         default:
             return nebula::cpp2::SupportedType::UNKNOWN;
@@ -58,51 +59,51 @@ Status SchemaHelper::createSchema(const std::vector<ColumnSpecification*>& specs
             auto value = std::move(valStatus).value();
             auto type = spec->type();
             switch (type) {
-                case nebula::ColumnType::BOOL: {
+                case nebula::cpp2::Value::Type::bool_value: {
                     if (value.which() != VAR_BOOL) {
-                        LOG(ERROR) << "ValueType is wrong, input type "
-                                   << static_cast<int32_t>(type)
-                                   << ", value type " <<  value.which();
+                        LOG(ERROR)
+                            << "ValueType is wrong, input type " << static_cast<int32_t>(type)
+                            << ", value type " << value.which();
                         return Status::Error("Wrong type");
                     }
                     v.set_bool_value(boost::get<bool>(value));
                     break;
                 }
-                case nebula::ColumnType::INT: {
+                case nebula::cpp2::Value::Type::int_value: {
                     if (value.which() != VAR_INT64) {
-                        LOG(ERROR) << "ValueType is wrong, input type "
-                                   << static_cast<int32_t>(type)
-                                   << ", value type " <<  value.which();
+                        LOG(ERROR)
+                            << "ValueType is wrong, input type " << static_cast<int32_t>(type)
+                            << ", value type " << value.which();
                         return Status::Error("Wrong type");
                     }
                     v.set_int_value(boost::get<int64_t>(value));
                     break;
                 }
-                case nebula::ColumnType::DOUBLE: {
+                case nebula::cpp2::Value::Type::double_value: {
                     if (value.which() != VAR_DOUBLE) {
-                        LOG(ERROR) << "ValueType is wrong, input type "
-                                   << static_cast<int32_t>(type)
-                                   << ", value type " <<  value.which();
+                        LOG(ERROR)
+                            << "ValueType is wrong, input type " << static_cast<int32_t>(type)
+                            << ", value type " << value.which();
                         return Status::Error("Wrong type");
                     }
                     v.set_double_value(boost::get<double>(value));
                     break;
                 }
-                case nebula::ColumnType::STRING: {
+                case nebula::cpp2::Value::Type::string_value: {
                     if (value.which() != VAR_STR) {
-                        LOG(ERROR) << "ValueType is wrong, input type "
-                                   << static_cast<int32_t>(type)
-                                   << ", value type " <<  value.which();
+                        LOG(ERROR)
+                            << "ValueType is wrong, input type " << static_cast<int32_t>(type)
+                            << ", value type " << value.which();
                         return Status::Error("Wrong type");
                     }
                     v.set_string_value(boost::get<std::string>(value));
                     break;
                 }
-                case nebula::ColumnType::TIMESTAMP: {
+                case nebula::cpp2::Value::Type::timestamp: {
                     if (value.which() != VAR_INT64 && value.which() != VAR_STR) {
-                        LOG(ERROR) << "ValueType is wrong, input type "
-                                   << static_cast<int32_t>(type)
-                                   << ", value type " <<  value.which();
+                        LOG(ERROR)
+                            << "ValueType is wrong, input type " << static_cast<int32_t>(type)
+                            << ", value type " << value.which();
                         return Status::Error("Wrong type");
                     }
                     auto timestamp = toTimestamp(value);
@@ -152,7 +153,6 @@ Status SchemaHelper::createSchema(const std::vector<ColumnSpecification*>& specs
     return Status::OK();
 }
 
-
 // static
 Status SchemaHelper::setTTLDuration(SchemaPropItem* schemaProp, nebula::cpp2::Schema& schema) {
     auto ret = schemaProp->getTtlDuration();
@@ -165,7 +165,6 @@ Status SchemaHelper::setTTLDuration(SchemaPropItem* schemaProp, nebula::cpp2::Sc
     return Status::OK();
 }
 
-
 // static
 Status SchemaHelper::setTTLCol(SchemaPropItem* schemaProp, nebula::cpp2::Schema& schema) {
     auto ret = schemaProp->getTtlCol();
@@ -173,7 +172,7 @@ Status SchemaHelper::setTTLCol(SchemaPropItem* schemaProp, nebula::cpp2::Schema&
         return ret.status();
     }
 
-    auto  ttlColName = ret.value();
+    auto ttlColName = ret.value();
     // Check the legality of the ttl column name
     for (auto& col : schema.columns) {
         if (col.name == ttlColName) {
@@ -189,7 +188,6 @@ Status SchemaHelper::setTTLCol(SchemaPropItem* schemaProp, nebula::cpp2::Schema&
     }
     return Status::Error("Ttl column name not exist in columns");
 }
-
 
 // static
 Status SchemaHelper::alterSchema(const std::vector<AlterSchemaOptItem*>& schemaOpts,
@@ -231,7 +229,7 @@ Status SchemaHelper::alterSchema(const std::vector<AlterSchemaOptItem*>& schemaO
             case SchemaPropItem::TTL_DURATION:
                 retInt = schemaProp->getTtlDuration();
                 if (!retInt.ok()) {
-                   return retInt.status();
+                    return retInt.status();
                 }
                 ttlDuration = retInt.value();
                 prop.set_ttl_duration(ttlDuration);
@@ -240,7 +238,7 @@ Status SchemaHelper::alterSchema(const std::vector<AlterSchemaOptItem*>& schemaO
                 // Check the legality of the column in meta
                 retStr = schemaProp->getTtlCol();
                 if (!retStr.ok()) {
-                   return retStr.status();
+                    return retStr.status();
                 }
                 prop.set_ttl_col(retStr.value());
                 break;
@@ -251,7 +249,7 @@ Status SchemaHelper::alterSchema(const std::vector<AlterSchemaOptItem*>& schemaO
     return Status::OK();
 }
 
-StatusOr<int64_t> SchemaHelper::toTimestamp(const VariantType &value) {
+StatusOr<int64_t> SchemaHelper::toTimestamp(const VariantType& value) {
     if (value.which() != VAR_INT64 && value.which() != VAR_STR) {
         return Status::Error("Invalid value type");
     }

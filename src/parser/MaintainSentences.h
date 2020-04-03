@@ -18,20 +18,20 @@ class ColumnSpecification final {
 public:
     using Value = Expression;
 
-    ColumnSpecification(ColumnType type, std::string *name) {
+    ColumnSpecification(nebula::cpp2::Value::Type type, std::string *name) {
         type_ = type;
         name_.reset(name);
     }
 
-    ColumnType type() const {
+    nebula::cpp2::Value::Type type() const {
         return type_;
     }
 
-    const std::string* name() const {
+    const std::string *name() const {
         return name_.get();
     }
 
-    void setValue(Value* expr) {
+    void setValue(Value *expr) {
         defaultExpr_.reset(DCHECK_NOTNULL(expr));
     }
 
@@ -42,7 +42,7 @@ public:
         return Status::Error();
     }
 
-    void setContext(ExpressionContext* ctx) {
+    void setContext(ExpressionContext *ctx) {
         if (defaultExpr_ != nullptr) {
             defaultExpr_->setContext(ctx);
         }
@@ -52,7 +52,7 @@ public:
         return defaultExpr_ != nullptr;
     }
 
-    OptVariantType getDefault(Getters& getter) {
+    OptVariantType getDefault(Getters &getter) {
         auto r = defaultExpr_->eval(getter);
         if (!r.ok()) {
             return std::move(r).status();
@@ -61,11 +61,10 @@ public:
     }
 
 private:
-    ColumnType                                  type_;
-    std::unique_ptr<std::string>                name_;
-    std::unique_ptr<Value>                      defaultExpr_{nullptr};
+    nebula::cpp2::Value::Type type_;
+    std::unique_ptr<std::string> name_;
+    std::unique_ptr<Value> defaultExpr_{nullptr};
 };
-
 
 class ColumnSpecificationList final {
 public:
@@ -74,10 +73,10 @@ public:
         columns_.emplace_back(column);
     }
 
-    std::vector<ColumnSpecification*> columnSpecs() const {
-        std::vector<ColumnSpecification*> result;
+    std::vector<ColumnSpecification *> columnSpecs() const {
+        std::vector<ColumnSpecification *> result;
         result.resize(columns_.size());
-        auto get = [] (auto &ptr) { return ptr.get(); };
+        auto get = [](auto &ptr) { return ptr.get(); };
         std::transform(columns_.begin(), columns_.end(), result.begin(), get);
         return result;
     }
@@ -85,7 +84,6 @@ public:
 private:
     std::vector<std::unique_ptr<ColumnSpecification>> columns_;
 };
-
 
 class ColumnNameList final {
 public:
@@ -95,10 +93,10 @@ public:
         columns_.emplace_back(column);
     }
 
-    std::vector<std::string*> columnNames() const {
-        std::vector<std::string*> result;
+    std::vector<std::string *> columnNames() const {
+        std::vector<std::string *> result;
         result.resize(columns_.size());
-        auto get = [] (auto &ptr) { return ptr.get(); };
+        auto get = [](auto &ptr) { return ptr.get(); };
         std::transform(columns_.begin(), columns_.end(), result.begin(), get);
         return result;
     }
@@ -107,15 +105,11 @@ private:
     std::vector<std::unique_ptr<std::string>> columns_;
 };
 
-
 class SchemaPropItem final {
 public:
     using Value = boost::variant<int64_t, bool, std::string>;
 
-    enum PropType : uint8_t {
-        TTL_DURATION,
-        TTL_COL
-    };
+    enum PropType : uint8_t { TTL_DURATION, TTL_COL };
 
     SchemaPropItem(PropType op, int64_t val) {
         propType_ = op;
@@ -161,7 +155,7 @@ private:
         return boost::get<int64_t>(propValue_);
     }
 
-    const std::string& asString() {
+    const std::string &asString() {
         return boost::get<std::string>(propValue_);
     }
 
@@ -192,10 +186,9 @@ private:
     }
 
 private:
-    Value        propValue_;
-    PropType     propType_;
+    Value propValue_;
+    PropType propType_;
 };
-
 
 class SchemaPropList final {
 public:
@@ -203,10 +196,10 @@ public:
         items_.emplace_back(item);
     }
 
-    std::vector<SchemaPropItem*> getProps() const {
-        std::vector<SchemaPropItem*> result;
+    std::vector<SchemaPropItem *> getProps() const {
+        std::vector<SchemaPropItem *> result;
         result.resize(items_.size());
-        auto get = [] (auto &ptr) { return ptr.get(); };
+        auto get = [](auto &ptr) { return ptr.get(); };
         std::transform(items_.begin(), items_.end(), result.begin(), get);
         return result;
     }
@@ -214,9 +207,8 @@ public:
     std::string toString() const;
 
 private:
-    std::vector<std::unique_ptr<SchemaPropItem>>    items_;
+    std::vector<std::unique_ptr<SchemaPropItem>> items_;
 };
-
 
 class CreateTagSentence final : public CreateSentence {
 public:
@@ -233,24 +225,23 @@ public:
 
     std::string toString() const override;
 
-    const std::string* name() const {
+    const std::string *name() const {
         return name_.get();
     }
 
-    std::vector<ColumnSpecification*> columnSpecs() const {
+    std::vector<ColumnSpecification *> columnSpecs() const {
         return columns_->columnSpecs();
     }
 
-    std::vector<SchemaPropItem*> getSchemaProps() const {
+    std::vector<SchemaPropItem *> getSchemaProps() const {
         return schemaProps_->getProps();
     }
 
 private:
-    std::unique_ptr<std::string>                name_;
-    std::unique_ptr<ColumnSpecificationList>    columns_;
-    std::unique_ptr<SchemaPropList>             schemaProps_;
+    std::unique_ptr<std::string> name_;
+    std::unique_ptr<ColumnSpecificationList> columns_;
+    std::unique_ptr<SchemaPropList> schemaProps_;
 };
-
 
 class CreateEdgeSentence final : public CreateSentence {
 public:
@@ -267,32 +258,27 @@ public:
 
     std::string toString() const override;
 
-    const std::string* name() const {
+    const std::string *name() const {
         return name_.get();
     }
 
-    std::vector<ColumnSpecification*> columnSpecs() const {
+    std::vector<ColumnSpecification *> columnSpecs() const {
         return columns_->columnSpecs();
     }
 
-    std::vector<SchemaPropItem*> getSchemaProps() const {
+    std::vector<SchemaPropItem *> getSchemaProps() const {
         return schemaProps_->getProps();
     }
 
 private:
-    std::unique_ptr<std::string>                name_;
-    std::unique_ptr<ColumnSpecificationList>    columns_;
-    std::unique_ptr<SchemaPropList>             schemaProps_;
+    std::unique_ptr<std::string> name_;
+    std::unique_ptr<ColumnSpecificationList> columns_;
+    std::unique_ptr<SchemaPropList> schemaProps_;
 };
-
 
 class AlterSchemaOptItem final {
 public:
-    enum OptionType : uint8_t {
-        ADD = 0x01,
-        CHANGE = 0x02,
-        DROP = 0x03
-    };
+    enum OptionType : uint8_t { ADD = 0x01, CHANGE = 0x02, DROP = 0x03 };
 
     AlterSchemaOptItem(OptionType op, ColumnSpecificationList *columns) {
         optType_ = op;
@@ -304,11 +290,11 @@ public:
         colNames_.reset(colNames);
     }
 
-    std::vector<ColumnSpecification*> columnSpecs() const {
+    std::vector<ColumnSpecification *> columnSpecs() const {
         return columns_->columnSpecs();
     }
 
-    std::vector<std::string*> columnNames() const {
+    std::vector<std::string *> columnNames() const {
         return colNames_->columnNames();
     }
 
@@ -321,11 +307,10 @@ public:
     std::string toString() const;
 
 private:
-    OptionType                                  optType_;
-    std::unique_ptr<ColumnSpecificationList>    columns_;
-    std::unique_ptr<ColumnNameList>             colNames_;
+    OptionType optType_;
+    std::unique_ptr<ColumnSpecificationList> columns_;
+    std::unique_ptr<ColumnNameList> colNames_;
 };
-
 
 class AlterSchemaOptList final {
 public:
@@ -334,10 +319,10 @@ public:
         alterSchemaItems_.emplace_back(item);
     }
 
-    std::vector<AlterSchemaOptItem*> alterSchemaItems() const {
-        std::vector<AlterSchemaOptItem*> result;
+    std::vector<AlterSchemaOptItem *> alterSchemaItems() const {
+        std::vector<AlterSchemaOptItem *> result;
         result.resize(alterSchemaItems_.size());
-        auto get = [] (auto &ptr) { return ptr.get(); };
+        auto get = [](auto &ptr) { return ptr.get(); };
         std::transform(alterSchemaItems_.begin(), alterSchemaItems_.end(), result.begin(), get);
         return result;
     }
@@ -345,15 +330,12 @@ public:
     std::string toString() const;
 
 private:
-    std::vector<std::unique_ptr<AlterSchemaOptItem>>    alterSchemaItems_;
+    std::vector<std::unique_ptr<AlterSchemaOptItem>> alterSchemaItems_;
 };
-
 
 class AlterTagSentence final : public Sentence {
 public:
-    AlterTagSentence(std::string *name,
-                     AlterSchemaOptList *opts,
-                     SchemaPropList *schemaProps) {
+    AlterTagSentence(std::string *name, AlterSchemaOptList *opts, SchemaPropList *schemaProps) {
         name_.reset(name);
         opts_.reset(opts);
         schemaProps_.reset(schemaProps);
@@ -362,30 +344,27 @@ public:
 
     std::string toString() const override;
 
-    const std::string* name() const {
+    const std::string *name() const {
         return name_.get();
     }
 
-    std::vector<AlterSchemaOptItem*> getSchemaOpts() const {
+    std::vector<AlterSchemaOptItem *> getSchemaOpts() const {
         return opts_->alterSchemaItems();
     }
 
-    std::vector<SchemaPropItem*> getSchemaProps() const {
+    std::vector<SchemaPropItem *> getSchemaProps() const {
         return schemaProps_->getProps();
     }
 
 private:
-    std::unique_ptr<std::string>                name_;
-    std::unique_ptr<AlterSchemaOptList>         opts_;
-    std::unique_ptr<SchemaPropList>             schemaProps_;
+    std::unique_ptr<std::string> name_;
+    std::unique_ptr<AlterSchemaOptList> opts_;
+    std::unique_ptr<SchemaPropList> schemaProps_;
 };
-
 
 class AlterEdgeSentence final : public Sentence {
 public:
-    AlterEdgeSentence(std::string *name,
-                      AlterSchemaOptList *opts,
-                      SchemaPropList *schemaProps) {
+    AlterEdgeSentence(std::string *name, AlterSchemaOptList *opts, SchemaPropList *schemaProps) {
         name_.reset(name);
         opts_.reset(opts);
         schemaProps_.reset(schemaProps);
@@ -394,24 +373,23 @@ public:
 
     std::string toString() const override;
 
-    const std::string* name() const {
+    const std::string *name() const {
         return name_.get();
     }
 
-    std::vector<AlterSchemaOptItem*> getSchemaOpts() const {
+    std::vector<AlterSchemaOptItem *> getSchemaOpts() const {
         return opts_->alterSchemaItems();
     }
 
-    std::vector<SchemaPropItem*> getSchemaProps() const {
+    std::vector<SchemaPropItem *> getSchemaProps() const {
         return schemaProps_->getProps();
     }
 
 private:
-    std::unique_ptr<std::string>                name_;
-    std::unique_ptr<AlterSchemaOptList>         opts_;
-    std::unique_ptr<SchemaPropList>             schemaProps_;
+    std::unique_ptr<std::string> name_;
+    std::unique_ptr<AlterSchemaOptList> opts_;
+    std::unique_ptr<SchemaPropList> schemaProps_;
 };
-
 
 class DescribeTagSentence final : public Sentence {
 public:
@@ -422,14 +400,13 @@ public:
 
     std::string toString() const override;
 
-    const std::string* name() const {
+    const std::string *name() const {
         return name_.get();
     }
 
 private:
-    std::unique_ptr<std::string>                name_;
+    std::unique_ptr<std::string> name_;
 };
-
 
 class DescribeEdgeSentence final : public Sentence {
 public:
@@ -440,14 +417,13 @@ public:
 
     std::string toString() const override;
 
-    const std::string* name() const {
+    const std::string *name() const {
         return name_.get();
     }
 
 private:
-    std::unique_ptr<std::string>                name_;
+    std::unique_ptr<std::string> name_;
 };
-
 
 class DropTagSentence final : public DropSentence {
 public:
@@ -458,14 +434,13 @@ public:
 
     std::string toString() const override;
 
-    const std::string* name() const {
+    const std::string *name() const {
         return name_.get();
     }
 
 private:
-    std::unique_ptr<std::string>                name_;
+    std::unique_ptr<std::string> name_;
 };
-
 
 class DropEdgeSentence final : public DropSentence {
 public:
@@ -476,14 +451,13 @@ public:
 
     std::string toString() const override;
 
-    const std::string* name() const {
+    const std::string *name() const {
         return name_.get();
     }
 
 private:
-    std::unique_ptr<std::string>                name_;
+    std::unique_ptr<std::string> name_;
 };
-
 
 class CreateTagIndexSentence final : public CreateSentence {
 public:
@@ -500,11 +474,11 @@ public:
 
     std::string toString() const override;
 
-    const std::string* indexName() const {
+    const std::string *indexName() const {
         return indexName_.get();
     }
 
-    const std::string* tagName() const {
+    const std::string *tagName() const {
         return tagName_.get();
     }
 
@@ -512,17 +486,16 @@ public:
         std::vector<std::string> result;
         auto columnNames = columns_->columnNames();
         result.resize(columnNames.size());
-        auto get = [] (auto ptr) { return *ptr; };
+        auto get = [](auto ptr) { return *ptr; };
         std::transform(columnNames.begin(), columnNames.end(), result.begin(), get);
         return result;
     }
 
 private:
-    std::unique_ptr<std::string>                indexName_;
-    std::unique_ptr<std::string>                tagName_;
-    std::unique_ptr<ColumnNameList>             columns_;
+    std::unique_ptr<std::string> indexName_;
+    std::unique_ptr<std::string> tagName_;
+    std::unique_ptr<ColumnNameList> columns_;
 };
-
 
 class CreateEdgeIndexSentence final : public CreateSentence {
 public:
@@ -539,11 +512,11 @@ public:
 
     std::string toString() const override;
 
-    const std::string* indexName() const {
+    const std::string *indexName() const {
         return indexName_.get();
     }
 
-    const std::string* edgeName() const {
+    const std::string *edgeName() const {
         return edgeName_.get();
     }
 
@@ -551,17 +524,16 @@ public:
         std::vector<std::string> result;
         auto columnNames = columns_->columnNames();
         result.resize(columnNames.size());
-        auto get = [] (auto ptr) { return *ptr; };
+        auto get = [](auto ptr) { return *ptr; };
         std::transform(columnNames.begin(), columnNames.end(), result.begin(), get);
         return result;
     }
 
 private:
-    std::unique_ptr<std::string>                indexName_;
-    std::unique_ptr<std::string>                edgeName_;
-    std::unique_ptr<ColumnNameList>             columns_;
+    std::unique_ptr<std::string> indexName_;
+    std::unique_ptr<std::string> edgeName_;
+    std::unique_ptr<ColumnNameList> columns_;
 };
-
 
 class DescribeTagIndexSentence final : public Sentence {
 public:
@@ -572,14 +544,13 @@ public:
 
     std::string toString() const override;
 
-    const std::string* indexName() const {
+    const std::string *indexName() const {
         return indexName_.get();
     }
 
 private:
-    std::unique_ptr<std::string>                indexName_;
+    std::unique_ptr<std::string> indexName_;
 };
-
 
 class DescribeEdgeIndexSentence final : public Sentence {
 public:
@@ -590,14 +561,13 @@ public:
 
     std::string toString() const override;
 
-    const std::string* indexName() const {
+    const std::string *indexName() const {
         return indexName_.get();
     }
 
 private:
-    std::unique_ptr<std::string>                indexName_;
+    std::unique_ptr<std::string> indexName_;
 };
-
 
 class DropTagIndexSentence final : public DropSentence {
 public:
@@ -608,14 +578,13 @@ public:
 
     std::string toString() const override;
 
-    const std::string* indexName() const {
+    const std::string *indexName() const {
         return indexName_.get();
     }
 
 private:
-    std::unique_ptr<std::string>                indexName_;
+    std::unique_ptr<std::string> indexName_;
 };
-
 
 class DropEdgeIndexSentence final : public DropSentence {
 public:
@@ -626,14 +595,13 @@ public:
 
     std::string toString() const override;
 
-    const std::string* indexName() const {
+    const std::string *indexName() const {
         return indexName_.get();
     }
 
 private:
-    std::unique_ptr<std::string>                indexName_;
+    std::unique_ptr<std::string> indexName_;
 };
-
 
 class RebuildTagIndexSentence final : public Sentence {
 public:
@@ -645,7 +613,7 @@ public:
 
     std::string toString() const override;
 
-    const std::string* indexName() const {
+    const std::string *indexName() const {
         return indexName_.get();
     }
 
@@ -654,10 +622,9 @@ public:
     }
 
 private:
-    std::unique_ptr<std::string>                indexName_;
-    bool                                        isOffline_;
+    std::unique_ptr<std::string> indexName_;
+    bool isOffline_;
 };
-
 
 class RebuildEdgeIndexSentence final : public Sentence {
 public:
@@ -669,7 +636,7 @@ public:
 
     std::string toString() const override;
 
-    const std::string* indexName() const {
+    const std::string *indexName() const {
         return indexName_.get();
     }
 
@@ -678,10 +645,10 @@ public:
     }
 
 private:
-    std::unique_ptr<std::string>                indexName_;
-    bool                                        isOffline_;
+    std::unique_ptr<std::string> indexName_;
+    bool isOffline_;
 };
 
 }   // namespace nebula
 
-#endif  // PARSER_MAINTAINSENTENCES_H_
+#endif   // PARSER_MAINTAINSENTENCES_H_
