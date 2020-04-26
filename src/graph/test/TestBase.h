@@ -266,6 +266,29 @@ protected:
         return TestOK();
     }
 
+    template<typename Tuple>
+    void logResp(const cpp2::ExecutionResponse &resp,
+                 std::unordered_set<uint16_t> ignoreColIndex = {}) {
+        if (resp.get_error_code() != cpp2::ErrorCode::SUCCEEDED) {
+            return;
+        }
+
+        if (resp.get_column_names() == nullptr || resp.get_rows() == nullptr) {
+            return;
+        }
+
+        const auto &colNames = *(resp.get_column_names());
+        for (const auto &col : colNames) {
+            std::clog << col;
+        }
+        std::clog << std::endl;
+
+        std::vector<Tuple> rows;
+        rows = rowsToTuples<Tuple>(respToRecords(resp, std::move(ignoreColIndex)));
+        for (const auto &row : rows) {
+            std::clog << row << std::endl;
+        }
+    }
 
 protected:
 };
