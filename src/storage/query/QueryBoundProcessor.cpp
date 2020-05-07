@@ -213,14 +213,14 @@ kvstore::ResultCode QueryBoundProcessor::processVertex(PartitionID partId, Verte
         return ret;
     }
 
-    if (!vResp.edge_data.empty()) {
+//    if (!vResp.edge_data.empty()) {
         // Only return the vertex if edges existed.
         std::lock_guard<std::mutex> lg(this->lock_);
         for (auto& edata : vResp.edge_data) {
             totalEdges_ += edata.edges.size();
         }
         vertices_.emplace_back(std::move(vResp));
-    }
+//    }
 
     return kvstore::ResultCode::SUCCEEDED;
 }

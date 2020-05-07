@@ -2361,8 +2361,8 @@ TEST_P(GoTest, ZeroStep) {
         auto code = client_->execute(query, resp);
         ASSERT_EQ(cpp2::ErrorCode::SUCCEEDED, code);
 
-        // Empty response
         std::vector<std::tuple<int64_t>> expected = {
+            {players_["Tim Duncan"].vid()}
         };
         ASSERT_TRUE(verifyResult(resp, expected));
     }
@@ -2376,6 +2376,7 @@ TEST_P(GoTest, ZeroStep) {
         ASSERT_EQ(cpp2::ErrorCode::SUCCEEDED, code);
 
         std::vector<std::tuple<int64_t>> expected = {
+            players_["Tim Duncan"].vid()
         };
         ASSERT_TRUE(verifyResult(resp, expected));
     }
