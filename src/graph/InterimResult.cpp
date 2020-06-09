@@ -211,6 +211,7 @@ InterimResult::buildIndex(const std::string &vidColumn) const {
             auto type = schema->getFieldType(i).type;
             switch (type) {
                 case SupportedType::VID: {
+                    vidColumn_ = i;
                     int64_t v;
                     auto rc = rowIter->getVid(i, v);
                     if (rc != ResultType::SUCCEEDED) {
@@ -292,6 +293,29 @@ OptVariantType InterimResult::InterimResultIndex::getColumnWithVID(VertexID id,
         columnIndex = iter->second;
     }
     return rows_[rowIndex][columnIndex];
+}
+
+StatusOr<VertexID> InterimResul::InterimResultIndex::getVidInRow(std::size_t row) const {
+    if (row >= rows_.size()) {
+        return Status::Error("Out of index.");
+    }
+    return rows_[row][vidColumn_];
+}
+
+OptVariantType InterimResul::InterimResultIndex::getColumnWithRow(std::size_t row, const std::string &col) const {
+    if (row >= rows_.size()) {
+        return Status::Error("Out of index.");
+    }
+    uint32_t columnIndex = 0;
+    {
+        auto iter = columnToIndex_.find(col);
+        if (iter == columnToIndex_.end()) {
+            LOG(ERROR) << "Prop `" << col << "' not found";
+            return Status::Error("Prop `%s' not found", col.c_str());
+        }
+        columnIndex = iter->second;
+    }
+    return rows_[row][columnIndex];
 }
 
 

@@ -86,8 +86,13 @@ public:
 
     class InterimResultIndex final {
     public:
+        OptVariantType getColumnWithRow(std::size_t row, const std::string &col) const;
+        StatusOr<VertexID> getVidInRow(std::size_t row) const;
         OptVariantType getColumnWithVID(VertexID id, const std::string &col) const;
         nebula::cpp2::SupportedType getColumnType(const std::string &col) const;
+        std::size_t rows() const {
+            return rows_.size();
+        }
 
     private:
         friend class InterimResult;
@@ -97,6 +102,7 @@ public:
         SchemaPtr                                   schema_{nullptr};
         std::unordered_map<std::string, uint32_t>   columnToIndex_;
         std::unordered_map<VertexID, uint32_t>      vidToRowIndex_;
+        std::size_t                                 vidColumn_;
     };
 
 private:
