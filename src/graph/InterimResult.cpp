@@ -211,7 +211,7 @@ InterimResult::buildIndex(const std::string &vidColumn) const {
             auto type = schema->getFieldType(i).type;
             switch (type) {
                 case SupportedType::VID: {
-                    vidColumn_ = i;
+                    index->vidColumn_ = i;
                     int64_t v;
                     auto rc = rowIter->getVid(i, v);
                     if (rc != ResultType::SUCCEEDED) {
@@ -295,14 +295,18 @@ OptVariantType InterimResult::InterimResultIndex::getColumnWithVID(VertexID id,
     return rows_[rowIndex][columnIndex];
 }
 
-StatusOr<VertexID> InterimResul::InterimResultIndex::getVidInRow(std::size_t row) const {
+StatusOr<VertexID> InterimResult::InterimResultIndex::getVidInRow(std::size_t row) const {
     if (row >= rows_.size()) {
         return Status::Error("Out of index.");
     }
-    return rows_[row][vidColumn_];
+    auto &value = rows_[row][vidColumn_];
+    if (value.which() != VAR_INT64) {
+        return Status::Error("Mismatched vid type.");
+    }
+    return boost::get<int64_t>(value);
 }
 
-OptVariantType InterimResul::InterimResultIndex::getColumnWithRow(std::size_t row, const std::string &col) const {
+OptVariantType InterimResult::InterimResultIndex::getColumnWithRow(std::size_t row, const std::string &col) const {
     if (row >= rows_.size()) {
         return Status::Error("Out of index.");
     }

@@ -2626,7 +2626,19 @@ TEST_P(GoTest, issue2087) {
             "| GO FROM $-.src OVER like YIELD $-.src as src, like._dst as dst";
         auto query = folly::stringPrintf(fmt, players_["Tim Duncan"].vid());
         auto code = client_->execute(query, resp);
-        ASSERT_EQ(cpp2::ErrorCode::E_EXECUTION_ERROR, code);
+        ASSERT_EQ(cpp2::ErrorCode::SUCCEEDED, code);
+
+        LOG(ERROR) << "DEBUG POINT " << "Tim Duncan " << players_["Tim Duncan"].vid();
+        LOG(ERROR) << "DEBUG POINT " << "Tony Parker " << players_["Tony Parker"].vid();
+        LOG(ERROR) << "DEBUG POINT " << "Manu Ginobili " << players_["Manu Ginobili"].vid();
+
+        std::vector<std::tuple<int64_t, int64_t>> expected = {
+            {players_["Tim Duncan"].vid(), players_["Tony Parker"].vid()},
+            {players_["Tim Duncan"].vid(), players_["Manu Ginobili"].vid()},
+            {players_["Tim Duncan"].vid(), players_["Tony Parker"].vid()},
+            {players_["Tim Duncan"].vid(), players_["Manu Ginobili"].vid()},
+        };
+        ASSERT_TRUE(verifyResult(resp, expected));
     }
     // from variable
     {
@@ -2635,7 +2647,7 @@ TEST_P(GoTest, issue2087) {
             "GO FROM $a.src OVER like YIELD $-.src as src, like._dst as dst";
         auto query = folly::stringPrintf(fmt, players_["Tim Duncan"].vid());
         auto code = client_->execute(query, resp);
-        ASSERT_EQ(cpp2::ErrorCode::E_EXECUTION_ERROR, code);
+        ASSERT_EQ(cpp2::ErrorCode::SUCCEEDED, code);
     }
 }
 

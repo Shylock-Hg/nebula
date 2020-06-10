@@ -71,7 +71,27 @@ private:
     }
 
     bool withInput() const {
-        return inputs_ != nullptr;
+        return inputs_ != nullptr && inputs_->hasData();
+    }
+
+    bool joinInput() const {
+        bool is = false;
+        for (const auto &col : yields_) {
+            if (col->expr()->kind() == Expression::Kind::kVariableProp ||
+                col->expr()->kind() == Expression::Kind::kInputProp) {
+                is = true;
+            }
+        }
+        return is;
+    }
+
+    VertexID getRoot(VertexID srcId) const {
+        VertexID rootId = srcId;
+        if (backTracker_ != nullptr) {
+            DCHECK_NE(steps_, 1);
+            rootId = backTracker_->get(srcId);
+        }
+        return rootId;
     }
 
     // is record the response data
