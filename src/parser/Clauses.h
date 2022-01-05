@@ -260,7 +260,9 @@ class YieldColumn final {
   }
 
   std::unique_ptr<YieldColumn> clone() const {
-    return std::make_unique<YieldColumn>(expr_->clone(), alias_);
+    auto y = std::make_unique<YieldColumn>(expr_->clone(), alias_);
+    y->setLiteral(literal_);
+    return y;
   }
 
   void setExpr(Expression *expr) {
@@ -279,14 +281,27 @@ class YieldColumn final {
     return alias_;
   }
 
+  void setLiteral(const std::string &literal) {
+    literal_ = literal;
+  }
+
+  const std::string &literal() const {
+    return literal_;
+  }
+
   std::string name() const {
-    return alias_.empty() ? toString() : alias();
+    if (alias_.empty()) {
+      return literal_.empty() ? expr_->rawString() : literal_;
+    } else {
+      return alias_;
+    }
   }
 
   std::string toString() const;
 
  private:
   Expression *expr_{nullptr};
+  std::string literal_{};  // literal of expression
   std::string alias_;
 };
 

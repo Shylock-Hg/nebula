@@ -49,6 +49,10 @@ class GraphScanner : public yyFlexLexer {
     return query_;
   }
 
+  const std::string *query() const {
+    return query_;
+  }
+
   void setUnaryMinus(bool v) {
     hasUnaryMinus_ = v;
   }

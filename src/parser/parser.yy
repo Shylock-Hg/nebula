@@ -52,6 +52,8 @@ static constexpr size_t kCommentLengthLimit = 256;
 
     void ifOutOfRange(const int64_t input,
                       const nebula::GraphParser::location_type& loc);
+
+    std::string symbolToString(const nebula::GraphParser::location_type& loc, const nebula::GraphScanner& scanner);
 }
 
 %union {
@@ -1577,7 +1579,10 @@ yield_column
         if (graph::ExpressionUtils::checkVarExprIfExist($1, qctx)) {
             throw nebula::GraphParser::syntax_error(@1, "Direct output of variable is prohibited");
         }
+        auto s = symbolToString(@1, scanner);
+        DCHECK(!s.empty()) << *scanner.query();
         $$ = new YieldColumn($1);
+        $$->setLiteral(s);
     }
     | expression KW_AS name_label {
         if (graph::ExpressionUtils::checkVarExprIfExist($1, qctx)) {
@@ -4057,4 +4062,27 @@ static int yylex(nebula::GraphParser::semantic_type* yylval,
         scanner.setUnaryMinus(false);
     }
     return token;
+}
+
+std::string symbolToString(const nebula::GraphParser::location_type& loc, const nebula::GraphScanner& scanner) {
+    std::ostringstream os;
+
+    auto *query = scanner.query();
+    if (query == nullptr) {
+        return os.str();
+    }
+
+    auto begin = loc.begin.column > 0 ? loc.begin.column - 1 : 0;
+    if ((loc.end.filename
+        && (!loc.begin.filename
+            || *loc.begin.filename != *loc.end.filename))
+        || loc.begin.line < loc.end.line
+        || begin >= query->size()) {
+        return os.str();
+    } else if (loc.begin.column < loc.end.column) {
+        uint32_t len = loc.end.column - loc.begin.column;
+        os << query->substr(begin, len);
+    }
+
+    return os.str();
 }
