@@ -28,25 +28,11 @@ StatusOr<SubPlan> ScanSeek::transformEdge(EdgeContext *edgeCtx) {
 bool ScanSeek::matchNode(NodeContext *nodeCtx) {
   auto &node = *nodeCtx->info;
   // only require the tag
-  if (node.tids.empty()) {
-    // empty labels means all labels
-    const auto *qctx = nodeCtx->matchClauseCtx->qctx;
-    auto allLabels = qctx->schemaMng()->getAllTags(nodeCtx->matchClauseCtx->space.id);
-    if (!allLabels.ok()) {
-      return false;
-    }
-    for (const auto &label : allLabels.value()) {
-      nodeCtx->scanInfo.schemaIds.emplace_back(label.first);
-      nodeCtx->scanInfo.schemaNames.emplace_back(label.second);
-    }
-    nodeCtx->scanInfo.anyLabel = true;
-  } else {
-    for (std::size_t i = 0; i < node.tids.size(); i++) {
-      auto tagId = node.tids[i];
-      auto tagName = node.labels[i];
-      nodeCtx->scanInfo.schemaIds.emplace_back(tagId);
-      nodeCtx->scanInfo.schemaNames.emplace_back(tagName);
-    }
+  for (std::size_t i = 0; i < node.tids.size(); i++) {
+    auto tagId = node.tids[i];
+    auto tagName = node.labels[i];
+    nodeCtx->scanInfo.schemaIds.emplace_back(tagId);
+    nodeCtx->scanInfo.schemaNames.emplace_back(tagName);
   }
   return true;
 }
@@ -56,7 +42,6 @@ StatusOr<SubPlan> ScanSeek::transformNode(NodeContext *nodeCtx) {
   auto *matchClauseCtx = nodeCtx->matchClauseCtx;
   auto *qctx = matchClauseCtx->qctx;
   auto *pool = qctx->objPool();
-  auto anyLabel = nodeCtx->scanInfo.anyLabel;
 
   auto vProps = std::make_unique<std::vector<storage::cpp2::VertexProp>>();
   std::vector<std::string> colNames{kVid};
@@ -81,19 +66,14 @@ StatusOr<SubPlan> ScanSeek::transformNode(NodeContext *nodeCtx) {
     auto *tagPropExpr = TagPropertyExpression::make(pool, tag, kTag);
     auto *notEmpty = UnaryExpression::makeIsNotEmpty(pool, tagPropExpr);
     if (prev != nullptr) {
-      if (anyLabel) {
-        auto *orExpr = LogicalExpression::makeOr(pool, prev, notEmpty);
-        prev = orExpr;
-      } else {
-        auto *andExpr = LogicalExpression::makeAnd(pool, prev, notEmpty);
-        prev = andExpr;
-      }
+      auto *andExpr = LogicalExpression::makeAnd(pool, prev, notEmpty);
+      prev = andExpr;
     } else {
       prev = notEmpty;
     }
   }
   if (prev != nullptr) {
-    // prev equals to nullptr happend when there are no tags in whole space
+    // prev equals to nullptr happend when there are no tags specified in node pattern
     auto *filter = Filter::make(qctx, scanVertices, prev);
     plan.root = filter;
   }

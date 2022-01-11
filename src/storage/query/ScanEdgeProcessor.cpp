@@ -64,6 +64,9 @@ nebula::cpp2::ErrorCode ScanEdgeProcessor::checkAndBuildContexts(const cpp2::Sca
 
   std::vector<cpp2::EdgeProp> returnProps = *req.return_columns_ref();
   ret = handleEdgeProps(returnProps);
+  if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    return ret;
+  }
   buildEdgeColName(returnProps);
   ret = buildFilter(req, [](const cpp2::ScanEdgeRequest& r) -> const std::string* {
     if (r.filter_ref().has_value()) {
@@ -72,6 +75,9 @@ nebula::cpp2::ErrorCode ScanEdgeProcessor::checkAndBuildContexts(const cpp2::Sca
       return nullptr;
     }
   });
+  if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    return ret;
+  }
   return ret;
 }
 

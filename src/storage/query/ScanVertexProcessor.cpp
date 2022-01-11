@@ -67,6 +67,9 @@ nebula::cpp2::ErrorCode ScanVertexProcessor::checkAndBuildContexts(
 
   std::vector<cpp2::VertexProp> returnProps = *req.return_columns_ref();
   ret = handleVertexProps(returnProps);
+  if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    return ret;
+  }
   buildTagColName(returnProps);
   ret = buildFilter(req, [](const cpp2::ScanVertexRequest& r) -> const std::string* {
     if (r.filter_ref().has_value()) {
@@ -75,6 +78,9 @@ nebula::cpp2::ErrorCode ScanVertexProcessor::checkAndBuildContexts(
       return nullptr;
     }
   });
+  if (ret != nebula::cpp2::ErrorCode::SUCCEEDED) {
+    return ret;
+  }
   return ret;
 }
 
