@@ -35,6 +35,27 @@ R_BRACKET                   "]"
 "DATE__"                { return TokenType::KW_DATE; }
 "TIME__"                { return TokenType::KW_TIME; }
 
+{DEC}{2}                {
+                          try {
+                            folly::StringPiece text(yytext, yyleng);
+                            uint64_t val = folly::to<uint64_t>(text);
+                            yylval->intVal = val;
+                          } catch (...) {
+                            throw DatetimeParser::syntax_error(*yylloc, "Invalid integer:");
+                          }
+                          return TokenType::TWO_DIGIT;
+                        }
+
+{DEC}{4}                {
+                          try {
+                            folly::StringPiece text(yytext, yyleng);
+                            uint64_t val = folly::to<uint64_t>(text);
+                            yylval->intVal = val;
+                          } catch (...) {
+                            throw DatetimeParser::syntax_error(*yylloc, "Invalid integer:");
+                          }
+                          return TokenType::FOUR_DIGIT;
+                        }
 
 {DEC}+                  {
                           try {
@@ -47,14 +68,14 @@ R_BRACKET                   "]"
                           return TokenType::INTEGER;
                         }
 
-{DEC}+\.{DEC}+          {
+\.{DEC}+                {
                           try {
                             folly::StringPiece text(yytext, yyleng);
                             yylval->doubleVal = folly::to<double>(text);
                           } catch (...) {
                             throw DatetimeParser::syntax_error(*yylloc, "Invalid double value:");
                           }
-                          return TokenType::DOUBLE;
+                          return TokenType::FRACTION;
                         }
 
 \[[^\]]+\]              {

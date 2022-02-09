@@ -55,14 +55,14 @@ class DatetimeScanner;
 %token TIME_DELIMITER SPACE POSITIVE NEGATIVE KW_DATETIME KW_DATE KW_TIME
 
 /* token type specification */
-%token <intVal> INTEGER
+%token <intVal> INTEGER TWO_DIGIT FOUR_DIGIT
 %token <strVal> TIME_ZONE_NAME
-%token <doubleVal> DOUBLE
+%token <doubleVal> FRACTION
 
 %type <dtVal> datetime
 %type <dVal> date
 %type <tVal> time
-%type <intVal> opt_time_zone time_zone_offset opt_time_zone_offset opt_time_zone_name
+%type <intVal> opt_time_zone time_zone_offset opt_time_zone_offset opt_time_zone_name integer
 
 %define api.prefix {datetime}
 
@@ -100,7 +100,7 @@ date_time_delimiter
   ;
 
 date
-  : INTEGER NEGATIVE INTEGER NEGATIVE INTEGER {
+  : integer NEGATIVE integer NEGATIVE integer {
     $$ = new nebula::Date($1, $3, $5);
     auto result = nebula::time::TimeUtils::validateDate(*$$);
     if (!result.ok()) {
@@ -108,7 +108,15 @@ date
       throw DatetimeParser::syntax_error(@1, result.toString());
     }
   }
-  | INTEGER NEGATIVE INTEGER {
+  | FOUR_DIGIT TWO_DIGIT TWO_DIGIT {
+    $$ = new nebula::Date($1, $2, $3);
+    auto result = nebula::time::TimeUtils::validateDate(*$$);
+    if (!result.ok()) {
+      delete $$;
+      throw DatetimeParser::syntax_error(@1, result.toString());
+    }
+  }
+  | integer NEGATIVE integer {
     $$ = new nebula::Date($1, $3, 1);
     auto result = nebula::time::TimeUtils::validateDate(*$$);
     if (!result.ok()) {
@@ -116,7 +124,15 @@ date
       throw DatetimeParser::syntax_error(@1, result.toString());
     }
   }
-  | INTEGER {
+  | FOUR_DIGIT TWO_DIGIT {
+    $$ = new nebula::Date($1, $2, 1);
+    auto result = nebula::time::TimeUtils::validateDate(*$$);
+    if (!result.ok()) {
+      delete $$;
+      throw DatetimeParser::syntax_error(@1, result.toString());
+    }
+  }
+  | integer {
     $$ = new nebula::Date($1, 1, 1);
     auto result = nebula::time::TimeUtils::validateDate(*$$);
     if (!result.ok()) {
@@ -127,17 +143,25 @@ date
   ;
 
 time
-  : INTEGER TIME_DELIMITER INTEGER TIME_DELIMITER DOUBLE {
-    double integer = 0;
-    auto fraction = std::modf($5, &integer);
-    $$ = new nebula::Time($1, $3, static_cast<int>(integer), std::round(fraction * 1000 * 1000));
+  : integer TIME_DELIMITER integer TIME_DELIMITER integer FRACTION {
+    auto fraction = $6;
+    $$ = new nebula::Time($1, $3, $5, std::round(fraction * 1000 * 1000));
     auto result = nebula::time::TimeUtils::validateTime(*$$);
     if (!result.ok()) {
       delete $$;
       throw DatetimeParser::syntax_error(@1, result.toString());
     }
   }
-  | INTEGER TIME_DELIMITER INTEGER TIME_DELIMITER INTEGER {
+  | TWO_DIGIT TWO_DIGIT TWO_DIGIT FRACTION {
+    auto fraction = $4;
+    $$ = new nebula::Time($1, $2, $3, std::round(fraction * 1000 * 1000));
+    auto result = nebula::time::TimeUtils::validateTime(*$$);
+    if (!result.ok()) {
+      delete $$;
+      throw DatetimeParser::syntax_error(@1, result.toString());
+    }
+  }
+  | integer TIME_DELIMITER integer TIME_DELIMITER integer {
     $$ = new nebula::Time($1, $3, $5, 0);
     auto result = nebula::time::TimeUtils::validateTime(*$$);
     if (!result.ok()) {
@@ -145,7 +169,15 @@ time
       throw DatetimeParser::syntax_error(@1, result.toString());
     }
   }
-  | INTEGER TIME_DELIMITER INTEGER {
+  | TWO_DIGIT TWO_DIGIT TWO_DIGIT {
+    $$ = new nebula::Time($1, $2, $3, 0);
+    auto result = nebula::time::TimeUtils::validateTime(*$$);
+    if (!result.ok()) {
+      delete $$;
+      throw DatetimeParser::syntax_error(@1, result.toString());
+    }
+  }
+  | integer TIME_DELIMITER integer {
     $$ = new nebula::Time($1, $3, 0, 0);
     auto result = nebula::time::TimeUtils::validateTime(*$$);
     if (!result.ok()) {
@@ -153,13 +185,34 @@ time
       throw DatetimeParser::syntax_error(@1, result.toString());
     }
   }
-  | INTEGER {
-    $$ = new nebula::Time($1, 0, 0, 0);
+  | TWO_DIGIT TWO_DIGIT {
+    $$ = new nebula::Time($1, $2, 0, 0);
     auto result = nebula::time::TimeUtils::validateTime(*$$);
     if (!result.ok()) {
       delete $$;
       throw DatetimeParser::syntax_error(@1, result.toString());
     }
+  }
+  | integer {
+    $$ = new nebula::Time($1, 0, 0, 0);
+    auto result = nebula::time::TimeUtils::validateTime(*$$);
+    if (!result.ok()) {
+      DLOG(ERROR) << "DEBUG POINT: invalid";
+      delete $$;
+      throw DatetimeParser::syntax_error(@1, result.toString());
+    }
+  }
+  ;
+
+integer
+  : INTEGER {
+    $$ = $1;
+  }
+  | TWO_DIGIT {
+    $$ = $1;
+  }
+  | FOUR_DIGIT {
+    $$ = $1;
   }
   ;
 
@@ -191,8 +244,16 @@ opt_time_zone_offset
   ;
 
 time_zone_offset
-  : INTEGER TIME_DELIMITER INTEGER {
+  : integer TIME_DELIMITER integer {
     auto time = nebula::Time($1, $3, 0, 0);
+    auto result = nebula::time::TimeUtils::validateTime(time);
+    if (!result.ok()) {
+      throw DatetimeParser::syntax_error(@1, result.toString());
+    }
+    $$ = nebula::time::TimeConversion::timeToSeconds(time);
+  }
+  | TWO_DIGIT TWO_DIGIT {
+    auto time = nebula::Time($1, $2, 0, 0);
     auto result = nebula::time::TimeUtils::validateTime(time);
     if (!result.ok()) {
       throw DatetimeParser::syntax_error(@1, result.toString());

@@ -91,6 +91,55 @@ TEST(DatetimeReader, DateTime) {
     ASSERT_TRUE(result.ok()) << result.status();
     EXPECT_EQ(nebula::DateTime(2019, 1, 1, 0, 0, 0, 0), result.value());
   }
+  // without delimiter
+  {
+    auto parser = time::DatetimeReader();
+    auto result = parser.readDatetime("20190103T222203.2333+2200");
+    ASSERT_TRUE(result.ok()) << result.status();
+    EXPECT_EQ(nebula::DateTime(2019, 1, 3, 20, 22, 3, 233300), result.value());
+  }
+  {
+    auto parser = time::DatetimeReader();
+    auto result = parser.readDatetime("20190103T222203.2333");
+    ASSERT_TRUE(result.ok()) << result.status();
+    EXPECT_EQ(nebula::DateTime(2019, 1, 3, 22, 22, 3, 233300), result.value());
+  }
+  {
+    auto parser = time::DatetimeReader();
+    auto result = parser.readDatetime("20190103T2222.2333");
+    ASSERT_TRUE(result.ok()) << result.status();
+    EXPECT_EQ(nebula::DateTime(2019, 1, 3, 22, 22, 0, 233300), result.value());
+  }
+  {
+    auto parser = time::DatetimeReader();
+    auto result = parser.readDatetime("201901T2222.2333");
+    ASSERT_TRUE(result.ok()) << result.status();
+    EXPECT_EQ(nebula::DateTime(2019, 1, 1, 22, 22, 0, 233300), result.value());
+  }
+  {
+    auto parser = time::DatetimeReader();
+    auto result = parser.readDatetime("201901T2222");
+    ASSERT_TRUE(result.ok()) << result.status();
+    EXPECT_EQ(nebula::DateTime(2019, 1, 1, 22, 22, 0, 0), result.value());
+  }
+  {
+    auto parser = time::DatetimeReader();
+    auto result = parser.readDatetime("20190203");
+    ASSERT_TRUE(result.ok()) << result.status();
+    EXPECT_EQ(nebula::DateTime(2019, 2, 3, 0, 0, 0, 0), result.value());
+  }
+  {
+    auto parser = time::DatetimeReader();
+    auto result = parser.readDatetime("201902");
+    ASSERT_TRUE(result.ok()) << result.status();
+    EXPECT_EQ(nebula::DateTime(2019, 2, 1, 0, 0, 0, 0), result.value());
+  }
+  {
+    auto parser = time::DatetimeReader();
+    auto result = parser.readDatetime("02");
+    ASSERT_TRUE(result.ok()) << result.status();
+    EXPECT_EQ(nebula::DateTime(2, 1, 1, 0, 0, 0, 0), result.value());
+  }
 }
 
 TEST(DatetimeReader, DateTimeFailed) {
@@ -180,6 +229,25 @@ TEST(DatetimeReader, Date) {
     ASSERT_TRUE(result.ok()) << result.status();
     EXPECT_EQ(nebula::Date(2019, 1, 1), result.value());
   }
+  // Without delimiter
+  {
+    auto parser = time::DatetimeReader();
+    auto result = parser.readDate("20190103");
+    ASSERT_TRUE(result.ok()) << result.status();
+    EXPECT_EQ(nebula::Date(2019, 1, 3), result.value());
+  }
+  {
+    auto parser = time::DatetimeReader();
+    auto result = parser.readDate("201901");
+    ASSERT_TRUE(result.ok()) << result.status();
+    EXPECT_EQ(nebula::Date(2019, 1, 1), result.value());
+  }
+  {
+    auto parser = time::DatetimeReader();
+    auto result = parser.readDate("01");
+    ASSERT_TRUE(result.ok()) << result.status();
+    EXPECT_EQ(nebula::Date(1, 1, 1), result.value());
+  }
 }
 
 TEST(DatetimeReader, DateFailed) {
@@ -228,6 +296,17 @@ TEST(DatetimeReader, DateFailed) {
     auto result = parser.readDate("-01-03");
     EXPECT_FALSE(result.ok()) << result.value();
   }
+  // without delimiter and not aligned
+  {
+    auto parser = time::DatetimeReader();
+    auto result = parser.readDate("2019013");
+    EXPECT_FALSE(result.ok()) << result.value();
+  }
+  {
+    auto parser = time::DatetimeReader();
+    auto result = parser.readDate("20190");
+    EXPECT_FALSE(result.ok()) << result.value();
+  }
 }
 
 TEST(DatetimeReader, Time) {
@@ -270,6 +349,31 @@ TEST(DatetimeReader, Time) {
     auto result = parser.readTime("22");
     ASSERT_TRUE(result.ok()) << result.status();
     EXPECT_EQ(nebula::Time(22, 0, 0, 0), result.value());
+  }
+  // without delimiter
+  {
+    auto parser = time::DatetimeReader();
+    auto result = parser.readTime("222203.2333");
+    ASSERT_TRUE(result.ok()) << result.status();
+    EXPECT_EQ(nebula::Time(22, 22, 3, 233300), result.value());
+  }
+  {
+    auto parser = time::DatetimeReader();
+    auto result = parser.readTime("2222.2333");
+    ASSERT_TRUE(result.ok()) << result.status();
+    EXPECT_EQ(nebula::Time(22, 22, 0, 233300), result.value());
+  }
+  {
+    auto parser = time::DatetimeReader();
+    auto result = parser.readTime("2222");
+    ASSERT_TRUE(result.ok()) << result.status();
+    EXPECT_EQ(nebula::Time(22, 22, 0, 0), result.value());
+  }
+  {
+    auto parser = time::DatetimeReader();
+    auto result = parser.readTime("2222+2200");
+    ASSERT_TRUE(result.ok()) << result.status();
+    EXPECT_EQ(nebula::Time(20, 22, 0, 0), result.value());
   }
 }
 
@@ -318,6 +422,17 @@ TEST(DatetimeReader, TimeFailed) {
   {
     auto parser = time::DatetimeReader();
     auto result = parser.readTime(":22:3.2333");
+    EXPECT_FALSE(result.ok()) << result.value();
+  }
+  // without delimtier and not aligned
+  {
+    auto parser = time::DatetimeReader();
+    auto result = parser.readTime("22223");
+    EXPECT_FALSE(result.ok()) << result.value();
+  }
+  {
+    auto parser = time::DatetimeReader();
+    auto result = parser.readTime("222");
     EXPECT_FALSE(result.ok()) << result.value();
   }
 }
