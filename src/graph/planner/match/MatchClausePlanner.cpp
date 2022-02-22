@@ -57,6 +57,21 @@ static Expression* genEdgeFilter(const EdgeInfo& edge) {
   return edge.filter;
 }
 
+static Expression* genNodeId(ObjectPool* pool, const NodeInfo& node) {
+  auto v = InputPropertyExpression::make(pool, node.alias);
+  auto vid = AttributeExpression::make(pool, v, ConstantExpression::make(pool, kVid));
+  return vid;
+}
+
+static std::vector<std::string> concatColNames(const std::vector<std::string>& lCols,
+                                               const std::vector<std::string>& rCols) {
+  std::vector<std::string> cols;
+  cols.reserve(lCols.size() + rCols.size());
+  cols.insert(cols.end(), lCols.begin(), lCols.end());
+  cols.insert(cols.end(), rCols.begin(), rCols.end());
+  return cols;
+}
+
 static StatusOr<std::unique_ptr<std::vector<VertexProp>>> genVertexProps(const NodeInfo& node,
                                                                          QueryContext* qctx,
                                                                          GraphSpaceID spaceId) {
@@ -127,11 +142,18 @@ StatusOr<SubPlan> MatchClausePlanner::transform(CypherClauseContextBase* clauseC
     SubPlan subplan;
     size_t startIndex = 0;
     bool startFromEdge = false;
+    // The node alias seen in current pattern only
+    std::unordered_set<std::string> nodeAliasesSeenInPattern;
 
     NG_RETURN_IF_ERROR(findStarts(
         nodeInfos, edgeInfos, matchClauseCtx, nodeAliasesSeen, startFromEdge, startIndex, subplan));
-    NG_RETURN_IF_ERROR(
-        expand(nodeInfos, edgeInfos, matchClauseCtx, startFromEdge, startIndex, subplan));
+    NG_RETURN_IF_ERROR(expand(nodeInfos,
+                              edgeInfos,
+                              matchClauseCtx,
+                              startFromEdge,
+                              startIndex,
+                              subplan,
+                              nodeAliasesSeenInPattern));
     NG_RETURN_IF_ERROR(
         connectPathPlan(nodeInfos, matchClauseCtx, subplan, nodeAliasesSeen, matchClausePlan));
   }
@@ -220,46 +242,62 @@ Status MatchClausePlanner::expand(const std::vector<NodeInfo>& nodeInfos,
                                   MatchClauseContext* matchClauseCtx,
                                   bool startFromEdge,
                                   size_t startIndex,
-                                  SubPlan& subplan) {
+                                  SubPlan& subplan,
+                                  std::unordered_set<std::string>& nodeAliasesSeenInPattern) {
   if (startFromEdge) {
-    return expandFromEdge(nodeInfos, edgeInfos, matchClauseCtx, startIndex, subplan);
+    return expandFromEdge(
+        nodeInfos, edgeInfos, matchClauseCtx, startIndex, subplan, nodeAliasesSeenInPattern);
   } else {
-    return expandFromNode(nodeInfos, edgeInfos, matchClauseCtx, startIndex, subplan);
+    return expandFromNode(
+        nodeInfos, edgeInfos, matchClauseCtx, startIndex, subplan, nodeAliasesSeenInPattern);
   }
 }
 
-Status MatchClausePlanner::expandFromNode(const std::vector<NodeInfo>& nodeInfos,
-                                          const std::vector<EdgeInfo>& edgeInfos,
-                                          MatchClauseContext* matchClauseCtx,
-                                          size_t startIndex,
-                                          SubPlan& subplan) {
+Status MatchClausePlanner::expandFromNode(
+    const std::vector<NodeInfo>& nodeInfos,
+    const std::vector<EdgeInfo>& edgeInfos,
+    MatchClauseContext* matchClauseCtx,
+    size_t startIndex,
+    SubPlan& subplan,
+    std::unordered_set<std::string>& nodeAliasesSeenInPattern) {
+  // Vid of the start node is known already
+  nodeAliasesSeenInPattern.emplace(nodeInfos[startIndex].alias);
   DCHECK(!nodeInfos.empty() && startIndex < nodeInfos.size());
   if (startIndex == 0) {
     // Pattern: (start)-[]-...-()
-    return rightExpandFromNode(nodeInfos, edgeInfos, matchClauseCtx, startIndex, subplan);
+    return rightExpandFromNode(
+        nodeInfos, edgeInfos, matchClauseCtx, startIndex, subplan, nodeAliasesSeenInPattern);
   }
 
   const auto& var = subplan.root->outputVar();
   if (startIndex == nodeInfos.size() - 1) {
     // Pattern: ()-[]-...-(start)
-    return leftExpandFromNode(nodeInfos, edgeInfos, matchClauseCtx, startIndex, var, subplan);
+    return leftExpandFromNode(
+        nodeInfos, edgeInfos, matchClauseCtx, startIndex, var, subplan, nodeAliasesSeenInPattern);
   }
 
   // Pattern: ()-[]-...-(start)-...-[]-()
-  NG_RETURN_IF_ERROR(
-      rightExpandFromNode(nodeInfos, edgeInfos, matchClauseCtx, startIndex, subplan));
-  NG_RETURN_IF_ERROR(leftExpandFromNode(
-      nodeInfos, edgeInfos, matchClauseCtx, startIndex, subplan.root->outputVar(), subplan));
+  NG_RETURN_IF_ERROR(rightExpandFromNode(
+      nodeInfos, edgeInfos, matchClauseCtx, startIndex, subplan, nodeAliasesSeenInPattern));
+  NG_RETURN_IF_ERROR(leftExpandFromNode(nodeInfos,
+                                        edgeInfos,
+                                        matchClauseCtx,
+                                        startIndex,
+                                        subplan.root->outputVar(),
+                                        subplan,
+                                        nodeAliasesSeenInPattern));
 
   return Status::OK();
 }
 
-Status MatchClausePlanner::leftExpandFromNode(const std::vector<NodeInfo>& nodeInfos,
-                                              const std::vector<EdgeInfo>& edgeInfos,
-                                              MatchClauseContext* matchClauseCtx,
-                                              size_t startIndex,
-                                              std::string inputVar,
-                                              SubPlan& subplan) {
+Status MatchClausePlanner::leftExpandFromNode(
+    const std::vector<NodeInfo>& nodeInfos,
+    const std::vector<EdgeInfo>& edgeInfos,
+    MatchClauseContext* matchClauseCtx,
+    size_t startIndex,
+    std::string inputVar,
+    SubPlan& subplan,
+    std::unordered_set<std::string>& nodeAliasesSeenInPattern) {
   Expression* nextTraverseStart = nullptr;
   auto qctx = matchClauseCtx->qctx;
   if (startIndex == nodeInfos.size() - 1) {
@@ -274,6 +312,11 @@ Status MatchClausePlanner::leftExpandFromNode(const std::vector<NodeInfo>& nodeI
   bool reversely = true;
   for (size_t i = startIndex; i > 0; --i) {
     auto& node = nodeInfos[i];
+    auto& dst = nodeInfos[i - 1];
+    bool expandInto = nodeAliasesSeenInPattern.find(dst.alias) != nodeAliasesSeenInPattern.end();
+    if (!node.anonymous) {
+      nodeAliasesSeenInPattern.emplace(node.alias);
+    }
     auto& edge = edgeInfos[i - 1];
     auto traverse = Traverse::make(qctx, subplan.root, spaceId);
     traverse->setSrc(nextTraverseStart);
@@ -294,13 +337,32 @@ Status MatchClausePlanner::leftExpandFromNode(const std::vector<NodeInfo>& nodeI
                             node,
                             edge,
                             startIndex + 1 == nodeInfos.size() ? i != startIndex : true));
-    subplan.root = traverse;
+    if (expandInto) {
+      //      Expression *previousNodeId = startIndex == i ? nextTraverseStart :
+      //      genNodeId(qctx->objPool(), dst);
+      Expression* nodeId = genNodeId(qctx->objPool(), dst);
+      auto* join = InnerJoin::make(qctx,
+                                   traverse,
+                                   {traverse->outputVar(), ExecutionContext::kLatestVersion},
+                                   {traverse->outputVar(), ExecutionContext::kLatestVersion},
+                                   {nodeId, genNextTraverseStart(qctx->objPool(), edge)},
+                                   {genNextTraverseStart(qctx->objPool(), edge),
+                                    genNextTraverseStart(qctx->objPool(), edge)});
+      join->setColNames(concatColNames(traverse->colNames(), traverse->colNames()));
+      subplan.root = join;
+      inputVar = join->outputVar();
+    } else {
+      subplan.root = traverse;
+      inputVar = traverse->outputVar();
+    }
     nextTraverseStart = genNextTraverseStart(qctx->objPool(), edge);
-    inputVar = traverse->outputVar();
   }
 
   VLOG(1) << subplan;
   auto& node = nodeInfos.front();
+  if (!node.anonymous) {
+    nodeAliasesSeenInPattern.emplace(node.alias);
+  }
   auto appendV = AppendVertices::make(qctx, subplan.root, spaceId);
   auto vertexProps = SchemaUtil::getAllVertexProp(qctx, spaceId, true);
   NG_RETURN_IF_ERROR(vertexProps);
@@ -316,11 +378,13 @@ Status MatchClausePlanner::leftExpandFromNode(const std::vector<NodeInfo>& nodeI
   return Status::OK();
 }
 
-Status MatchClausePlanner::rightExpandFromNode(const std::vector<NodeInfo>& nodeInfos,
-                                               const std::vector<EdgeInfo>& edgeInfos,
-                                               MatchClauseContext* matchClauseCtx,
-                                               size_t startIndex,
-                                               SubPlan& subplan) {
+Status MatchClausePlanner::rightExpandFromNode(
+    const std::vector<NodeInfo>& nodeInfos,
+    const std::vector<EdgeInfo>& edgeInfos,
+    MatchClauseContext* matchClauseCtx,
+    size_t startIndex,
+    SubPlan& subplan,
+    std::unordered_set<std::string>& nodeAliasesSeenInPattern) {
   auto inputVar = subplan.root->outputVar();
   auto qctx = matchClauseCtx->qctx;
   auto spaceId = matchClauseCtx->space.id;
@@ -328,6 +392,11 @@ Status MatchClausePlanner::rightExpandFromNode(const std::vector<NodeInfo>& node
   bool reversely = false;
   for (size_t i = startIndex; i < edgeInfos.size(); ++i) {
     auto& node = nodeInfos[i];
+    auto& dst = nodeInfos[i + 1];
+    bool expandInto = nodeAliasesSeenInPattern.find(dst.alias) != nodeAliasesSeenInPattern.end();
+    if (!node.anonymous) {
+      nodeAliasesSeenInPattern.emplace(node.alias);
+    }
     auto& edge = edgeInfos[i];
     auto traverse = Traverse::make(qctx, subplan.root, spaceId);
     traverse->setSrc(nextTraverseStart);
@@ -343,13 +412,32 @@ Status MatchClausePlanner::rightExpandFromNode(const std::vector<NodeInfo>& node
     traverse->setTrackPrevPath(i != startIndex);
     traverse->setColNames(
         genTraverseColNames(subplan.root->colNames(), node, edge, i != startIndex));
-    subplan.root = traverse;
+    if (expandInto) {
+      // Expression *previousNodeId = startIndex == i ? nextTraverseStart :
+      // genNodeId(qctx->objPool(), dst);
+      Expression* nodeId = genNodeId(qctx->objPool(), dst);
+      auto* join = InnerJoin::make(qctx,
+                                   traverse,
+                                   {traverse->outputVar(), ExecutionContext::kLatestVersion},
+                                   {traverse->outputVar(), ExecutionContext::kLatestVersion},
+                                   {nodeId, genNextTraverseStart(qctx->objPool(), edge)},
+                                   {genNextTraverseStart(qctx->objPool(), edge),
+                                    genNextTraverseStart(qctx->objPool(), edge)});
+      join->setColNames(concatColNames(traverse->colNames(), traverse->colNames()));
+      subplan.root = join;
+      inputVar = join->outputVar();
+    } else {
+      subplan.root = traverse;
+      inputVar = traverse->outputVar();
+    }
     nextTraverseStart = genNextTraverseStart(qctx->objPool(), edge);
-    inputVar = traverse->outputVar();
   }
 
   VLOG(1) << subplan;
   auto& node = nodeInfos.back();
+  if (!node.anonymous) {
+    nodeAliasesSeenInPattern.emplace(node.alias);
+  }
   auto appendV = AppendVertices::make(qctx, subplan.root, spaceId);
   auto vertexProps = SchemaUtil::getAllVertexProp(qctx, spaceId, true);
   NG_RETURN_IF_ERROR(vertexProps);
@@ -365,12 +453,15 @@ Status MatchClausePlanner::rightExpandFromNode(const std::vector<NodeInfo>& node
   return Status::OK();
 }
 
-Status MatchClausePlanner::expandFromEdge(const std::vector<NodeInfo>& nodeInfos,
-                                          const std::vector<EdgeInfo>& edgeInfos,
-                                          MatchClauseContext* matchClauseCtx,
-                                          size_t startIndex,
-                                          SubPlan& subplan) {
-  return expandFromNode(nodeInfos, edgeInfos, matchClauseCtx, startIndex, subplan);
+Status MatchClausePlanner::expandFromEdge(
+    const std::vector<NodeInfo>& nodeInfos,
+    const std::vector<EdgeInfo>& edgeInfos,
+    MatchClauseContext* matchClauseCtx,
+    size_t startIndex,
+    SubPlan& subplan,
+    std::unordered_set<std::string>& nodeAliasesSeenInPattern) {
+  return expandFromNode(
+      nodeInfos, edgeInfos, matchClauseCtx, startIndex, subplan, nodeAliasesSeenInPattern);
 }
 
 Status MatchClausePlanner::projectColumnsBySymbols(MatchClauseContext* matchClauseCtx,

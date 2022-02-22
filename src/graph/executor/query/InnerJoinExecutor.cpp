@@ -24,6 +24,16 @@ Status InnerJoinExecutor::close() {
   return Executor::close();
 }
 
+static inline std::ostream& operator<<(std::ostream& os, const std::vector<const List*>& l) {
+  os << "[";
+  for (const auto& r : l) {
+    os << *r;
+    os << ", ";
+  }
+  os << "]";
+  return os;
+}
+
 folly::Future<Status> InnerJoinExecutor::join(const std::vector<Expression*>& hashKeys,
                                               const std::vector<Expression*>& probeKeys,
                                               const std::vector<std::string>& colNames) {
@@ -58,6 +68,9 @@ folly::Future<Status> InnerJoinExecutor::join(const std::vector<Expression*>& ha
       exchange_ = true;
       buildHashTable(probeKeys, rhsIter_.get(), hashTable);
       result = probe(hashKeys, lhsIter_.get(), hashTable);
+    }
+    for (auto& pair : hashTable) {
+      DLOG(ERROR) << "DEBUG POINT: get hash table kv: " << pair.first << ":" << pair.second;
     }
   }
   result.colNames = colNames;
@@ -103,8 +116,10 @@ void InnerJoinExecutor::buildNewRow(const std::unordered_map<T, std::vector<cons
                                     DataSet& ds) const {
   const auto& range = hashTable.find(val);
   if (range == hashTable.end()) {
+    // DLOG(ERROR) << "DEBUG POINT: probe " << val << " failed.";
     return;
   }
+  DLOG(ERROR) << "DEBUG POINT: probe " << val << " succeeded.";
   for (auto* row : range->second) {
     auto& lRow = *row;
     Row newRow;
