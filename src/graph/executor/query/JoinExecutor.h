@@ -5,6 +5,7 @@
 #ifndef GRAPH_EXECUTOR_QUERY_JOINEXECUTOR_H_
 #define GRAPH_EXECUTOR_QUERY_JOINEXECUTOR_H_
 
+#include "common/base/JoinHashTable.h"
 #include "graph/executor/Executor.h"
 
 namespace nebula {
@@ -24,11 +25,11 @@ class JoinExecutor : public Executor {
 
   void buildHashTable(const std::vector<Expression*>& hashKeys,
                       Iterator* iter,
-                      std::unordered_map<List, std::vector<const Row*>>& hashTable) const;
+                      JoinHashTable<List, std::vector<const Row*>>& hashTable) const;
 
   void buildSingleKeyHashTable(Expression* hashKey,
                                Iterator* iter,
-                               std::unordered_map<Value, std::vector<const Row*>>& hashTable) const;
+                               JoinHashTable<Value, std::vector<const Row*>>& hashTable) const;
 
   std::unique_ptr<Iterator> lhsIter_;
   std::unique_ptr<Iterator> rhsIter_;

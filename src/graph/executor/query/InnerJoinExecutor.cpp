@@ -34,8 +34,7 @@ folly::Future<Status> InnerJoinExecutor::join(const std::vector<Expression*>& ha
   }
 
   if (hashKeys.size() == 1 && probeKeys.size() == 1) {
-    std::unordered_map<Value, std::vector<const Row*>> hashTable;
-    hashTable.reserve(bucketSize);
+    JoinHashTable<Value, std::vector<const Row*>> hashTable(bucketSize);
     if (lhsIter_->size() < rhsIter_->size()) {
       buildSingleKeyHashTable(hashKeys.front(), lhsIter_.get(), hashTable);
       result = singleKeyProbe(probeKeys.front(), rhsIter_.get(), hashTable);
@@ -45,8 +44,7 @@ folly::Future<Status> InnerJoinExecutor::join(const std::vector<Expression*>& ha
       result = singleKeyProbe(hashKeys.front(), lhsIter_.get(), hashTable);
     }
   } else {
-    std::unordered_map<List, std::vector<const Row*>> hashTable;
-    hashTable.reserve(bucketSize);
+    JoinHashTable<List, std::vector<const Row*>> hashTable(bucketSize);
     if (lhsIter_->size() < rhsIter_->size()) {
       buildHashTable(hashKeys, lhsIter_.get(), hashTable);
       result = probe(probeKeys, rhsIter_.get(), hashTable);
@@ -63,7 +61,7 @@ folly::Future<Status> InnerJoinExecutor::join(const std::vector<Expression*>& ha
 DataSet InnerJoinExecutor::probe(
     const std::vector<Expression*>& probeKeys,
     Iterator* probeIter,
-    const std::unordered_map<List, std::vector<const Row*>>& hashTable) const {
+    const JoinHashTable<List, std::vector<const Row*>>& hashTable) const {
   DataSet ds;
   QueryExpressionContext ctx(ectx_);
   ds.rows.reserve(probeIter->size());
@@ -82,7 +80,7 @@ DataSet InnerJoinExecutor::probe(
 DataSet InnerJoinExecutor::singleKeyProbe(
     Expression* probeKey,
     Iterator* probeIter,
-    const std::unordered_map<Value, std::vector<const Row*>>& hashTable) const {
+    const JoinHashTable<Value, std::vector<const Row*>>& hashTable) const {
   DataSet ds;
   QueryExpressionContext ctx(ectx_);
   for (; probeIter->valid(); probeIter->next()) {
@@ -93,7 +91,7 @@ DataSet InnerJoinExecutor::singleKeyProbe(
 }
 
 template <class T>
-void InnerJoinExecutor::buildNewRow(const std::unordered_map<T, std::vector<const Row*>>& hashTable,
+void InnerJoinExecutor::buildNewRow(const JoinHashTable<T, std::vector<const Row*>>& hashTable,
                                     const T& val,
                                     const Row& rRow,
                                     DataSet& ds) const {
