@@ -43,17 +43,6 @@ StatusOr<OptRule::TransformResult> RemoveNoopProjectRule::transform(
   const auto& groupNodes = depGroup->groupNodes();
   for (auto* groupNode : groupNodes) {
     auto* newNode = groupNode->node()->clone();
-    const auto& newColNames = newNode->colNames();
-    const auto& oldColNames = oldProjNode->colNames();
-    auto colsNum = newColNames.size();
-    if (colsNum != oldColNames.size()) {
-      return TransformResult::noTransform();
-    }
-    for (size_t i = 0; i < colsNum; ++i) {
-      if (newColNames[i].compare(oldColNames[i])) {
-        return TransformResult::noTransform();
-      }
-    }
     newNode->setOutputVar(oldProjNode->outputVar());
     auto* newGroupNode = OptGroupNode::create(octx, newNode, projGroup);
     newGroupNode->setDeps(groupNode->dependencies());
@@ -79,15 +68,33 @@ bool RemoveNoopProjectRule::match(OptContext* octx, const MatchedResult& matched
   // disable BinaryInputNode/SetOp (multi input)
   // disable IndexScan/PassThrough (multi output)
   if (!node->isSingleInput() || kind == PlanNode::Kind::kUnion || kind == PlanNode::Kind::kMinus ||
-      kind == PlanNode::Kind::kIntersect || kind == PlanNode::Kind::kIndexScan ||
-      kind == PlanNode::Kind::kPassThrough) {
+      kind == PlanNode::Kind::kIntersect || kind == PlanNode::Kind::kFilter ||
+      kind == PlanNode::Kind::kPassThrough || kind == PlanNode::Kind::kLimit ||
+      kind == PlanNode::Kind::kDedup) {
     return false;
   }
 
   auto* projNode = static_cast<const graph::Project*>(projGroupNode->node());
   std::vector<YieldColumn*> cols = projNode->columns()->columns();
   for (auto* col : cols) {
-    if (!col->alias().empty() || col->expr()->kind() != Expression::Kind::kVarProperty) {
+    if (col->expr()->kind() != Expression::Kind::kVarProperty &&
+        col->expr()->kind() != Expression::Kind::kInputProperty) {
+      return false;
+    }
+  }
+  const auto* depNode = node;
+  const auto& depColNames = depNode->colNames();
+  const auto& projColNames = projNode->colNames();
+  auto colsNum = depColNames.size();
+  if (colsNum != projColNames.size()) {
+    return false;
+  }
+  for (size_t i = 0; i < colsNum; ++i) {
+    if (depColNames[i].compare(projColNames[i])) {
+      return false;
+    }
+    const auto* propExpr = static_cast<PropertyExpression*>(cols[i]->expr());
+    if (propExpr->prop() != projColNames[i]) {
       return false;
     }
   }
