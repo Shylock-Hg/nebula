@@ -9,7 +9,9 @@
 #include <cassert>
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
 
 #include "gtest/gtest_prod.h"
@@ -60,7 +62,10 @@ class JoinHashTable final {
   };
 
   //  using Allocator = Allocator<ValueType>;
-  using Entry = Bucket;
+  // inline storage for small object and remote storage for large object
+  using Entry = typename std::conditional<std::bool_constant<sizeof(T) <= 64>::value,
+                                          std::optional<ValueType>,
+                                          Bucket>::type;
   using EntryAllocator = Allocator<Entry>;
 
   static constexpr std::size_t kLoadFactor = 85;        // 85%
@@ -181,29 +186,18 @@ class JoinHashTable final {
       return std::make_pair(end(), false);
     }
     const std::size_t indexNumber = index(key);
-    for (std::size_t i = indexNumber; i < capacity_; ++i) {
-      if (!table_[i].has_value()) {
+    const std::size_t iteration = capacity_ + indexNumber;
+    for (std::size_t i = indexNumber; i < iteration; ++i) {
+      std::size_t modIndex = i & indexMask_;
+      if (!table_[modIndex].has_value()) {
         alloc.construct(
-            table_ + i,
+            table_ + modIndex,
             std::pair<const Key, T>(std::forward<_Key>(key), std::forward<Args>(args)...));
         size_ += 1;
-        return std::make_pair(Iterator(table_ + i), true);
+        return std::make_pair(Iterator(table_ + modIndex), true);
       } else {
-        if (KeyEqual()(key, table_[i].value().first)) {
-          return std::make_pair(Iterator(table_ + i), false);
-        }
-      }
-    }
-    for (ssize_t i = static_cast<ssize_t>(indexNumber - 1); i >= 0; --i) {
-      if (!table_[i].has_value()) {
-        alloc.construct(
-            table_ + i,
-            std::pair<const Key, T>(std::forward<_Key>(key), std::forward<Args>(args)...));
-        size_ += 1;
-        return std::make_pair(Iterator(table_ + i), true);
-      } else {
-        if (KeyEqual()(key, table_[i].value().first)) {
-          return std::make_pair(Iterator(table_ + i), false);
+        if (KeyEqual()(key, table_[modIndex].value().first)) {
+          return std::make_pair(Iterator(table_ + modIndex), false);
         }
       }
     }
@@ -212,16 +206,10 @@ class JoinHashTable final {
 
   ConstIterator find(const Key &key) const {
     const std::size_t indexNumber = index(key);
-    for (std::size_t i = indexNumber; i < capacity_; ++i) {
-      auto r = findIndex(i, key);
-      if (r.first != end()) {
-        return r.first;
-      } else if (!r.second) {
-        return end();
-      }
-    }
-    for (ssize_t i = static_cast<ssize_t>(indexNumber - 1); i >= 0; --i) {
-      auto r = findIndex(i, key);
+    const std::size_t iteration = capacity_ + indexNumber;
+    for (std::size_t i = indexNumber; i < iteration; ++i) {
+      std::size_t modIndex = i & indexMask_;
+      auto r = findIndex(modIndex, key);
       if (r.first != end()) {
         return r.first;
       } else if (!r.second) {
