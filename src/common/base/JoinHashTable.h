@@ -9,7 +9,6 @@
 #include <cassert>
 #include <cstddef>
 #include <memory>
-#include <optional>
 #include <stdexcept>
 #include <utility>
 
@@ -41,10 +40,30 @@ class JoinHashTable final {
  public:
   using ValueType = std::pair<const Key, T>;
   //  using Allocator = Allocator<ValueType>;
-  using Entry = std::optional<std::pair<const Key, T>>;
+  struct Bucket {
+    Bucket() = default;
+    explicit Bucket(ValueType &&value) : value_(new ValueType(std::move(value))) {}
+
+    bool has_value() const {
+      return value_ != nullptr;
+    }
+
+    const ValueType &value() const {
+      return *value_;
+    }
+
+    ValueType &value() {
+      return *value_;
+    }
+
+    std::unique_ptr<ValueType> value_{nullptr};
+  };
+
+  //  using Allocator = Allocator<ValueType>;
+  using Entry = Bucket;
   using EntryAllocator = Allocator<Entry>;
 
-  static constexpr std::size_t kLoadFactor = 75;        // 75%
+  static constexpr std::size_t kLoadFactor = 85;        // 85%
   static constexpr std::size_t kAlmostFullFactor = 90;  // 90%
 
   static inline ValueType *valuePointer(Entry &entry) {
@@ -68,6 +87,7 @@ class JoinHashTable final {
 
   explicit JoinHashTable(std::size_t size_hint)
       : capacity_(cap(size_hint)),
+        indexMask_(capacity_ - 1),
         size_(0),
         table_(alloc.allocate(capacity_ + 1 /* Dummy entry for end */)) {
     assert(capacity_ && !(capacity_ & (capacity_ - 1)));  // capacity must be power of 2
@@ -149,7 +169,7 @@ class JoinHashTable final {
   }
 
   inline std::size_t index(const Key &key) const {
-    const std::size_t indexNumber = Hash()(key) & (capacity_ - 1);  // hash % capacity
+    const std::size_t indexNumber = Hash()(key) & indexMask_;  // hash % capacity
     assert(indexNumber < capacity_);
     return indexNumber;
   }
@@ -160,7 +180,6 @@ class JoinHashTable final {
     if (almostFull()) {
       return std::make_pair(end(), false);
     }
-    const Key &keyRef = key;
     const std::size_t indexNumber = index(key);
     for (std::size_t i = indexNumber; i < capacity_; ++i) {
       if (!table_[i].has_value()) {
@@ -170,7 +189,7 @@ class JoinHashTable final {
         size_ += 1;
         return std::make_pair(Iterator(table_ + i), true);
       } else {
-        if (KeyEqual()(keyRef, table_[i].value().first)) {
+        if (KeyEqual()(key, table_[i].value().first)) {
           return std::make_pair(Iterator(table_ + i), false);
         }
       }
@@ -183,7 +202,7 @@ class JoinHashTable final {
         size_ += 1;
         return std::make_pair(Iterator(table_ + i), true);
       } else {
-        if (KeyEqual()(keyRef, table_[i].value().first)) {
+        if (KeyEqual()(key, table_[i].value().first)) {
           return std::make_pair(Iterator(table_ + i), false);
         }
       }
@@ -288,6 +307,8 @@ class JoinHashTable final {
  private:
   EntryAllocator alloc;
   const std::size_t capacity_{0};  // capacity of the table
-  std::size_t size_{0};            // size of elements
-  Entry *table_{nullptr};          // vector of elements
+  // index mask, always equals to (capacity - 1)
+  const std::size_t indexMask_{0};
+  std::size_t size_{0};    // size of elements
+  Entry *table_{nullptr};  // vector of elements
 };
