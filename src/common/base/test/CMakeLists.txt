@@ -99,3 +99,13 @@ nebula_add_test(
     SOURCES ObjectPoolTest.cpp
     LIBRARIES gtest gtest_main
 )
+
+nebula_add_executable(
+    NAME join_bm
+    SOURCES JoinBenchMark.cpp
+    OBJECTS
+        $<TARGET_OBJECTS:base_obj>
+        $<TARGET_OBJECTS:datatypes_obj> 
+        $<TARGET_OBJECTS:wkt_wkb_io_obj>
+    LIBRARIES follybenchmark
+)
