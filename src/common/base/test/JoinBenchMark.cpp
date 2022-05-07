@@ -7,6 +7,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
 #include <unordered_map>
 
 #include "common/base/JoinHashTable.h"
@@ -78,7 +79,7 @@ BENCHMARK_RELATIVE(JoinHashTable_10k, iters) {
 
 BENCHMARK_DRAW_LINE();
 
-BENCHMARK(std_10k_value, iters) {
+BENCHMARK(std_10k_value_int, iters) {
   constexpr int64_t kData = 10000;
   for (auto i = 0u; i < iters; i++) {
     std::unordered_map<Value, std::vector<const List*>> t;
@@ -93,7 +94,7 @@ BENCHMARK(std_10k_value, iters) {
   }
 }
 
-BENCHMARK_RELATIVE(JoinHashTable_10k_value, iters) {
+BENCHMARK_RELATIVE(JoinHashTable_10k_value_int, iters) {
   constexpr int64_t kData = 10000;
   for (auto i = 0u; i < iters; i++) {
     JoinHashTable<Value, std::vector<const List*>> t(kData);
@@ -102,6 +103,37 @@ BENCHMARK_RELATIVE(JoinHashTable_10k_value, iters) {
     }
     for (int64_t j = 0; j < kData; j++) {
       auto found = t.find(Value(j));
+      folly::doNotOptimizeAway(found);
+    }
+  }
+}
+
+BENCHMARK_DRAW_LINE();
+
+BENCHMARK(std_10k_value_string, iters) {
+  constexpr int64_t kData = 10000;
+  for (auto i = 0u; i < iters; i++) {
+    std::unordered_map<Value, std::vector<const List*>> t;
+    t.reserve(kData);
+    for (int64_t j = 0; j < kData; j++) {
+      t[Value(std::to_string(j))].emplace_back(nullptr);
+    }
+    for (int64_t j = 0; j < kData; j++) {
+      auto found = t.find(Value(std::to_string(j)));
+      folly::doNotOptimizeAway(found);
+    }
+  }
+}
+
+BENCHMARK_RELATIVE(JoinHashTable_10k_value_string, iters) {
+  constexpr int64_t kData = 10000;
+  for (auto i = 0u; i < iters; i++) {
+    JoinHashTable<Value, std::vector<const List*>> t(kData);
+    for (int64_t j = 0; j < kData; j++) {
+      t[Value(std::to_string(j))].emplace_back(nullptr);
+    }
+    for (int64_t j = 0; j < kData; j++) {
+      auto found = t.find(Value(std::to_string(j)));
       folly::doNotOptimizeAway(found);
     }
   }
