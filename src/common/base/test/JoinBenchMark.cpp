@@ -110,6 +110,52 @@ BENCHMARK_RELATIVE(JoinHashTable_10k, iters) {
 
 BENCHMARK_DRAW_LINE();
 
+BENCHMARK(std_10k_string, iters) {
+  constexpr std::size_t kData = 10000;
+  for (auto i = 0u; i < iters; i++) {
+    std::unordered_map<std::string, std::string> t;
+    t.reserve(kData);
+    for (std::size_t j = 0; j < kData; j++) {
+      t[std::to_string(j)] = std::to_string(j);
+    }
+    for (std::size_t j = 0; j < kData; j++) {
+      auto found = t.find(std::to_string(j));
+      folly::doNotOptimizeAway(found);
+    }
+  }
+}
+
+BENCHMARK_RELATIVE(F14_10k_string, iters) {
+  constexpr std::size_t kData = 10000;
+  for (auto i = 0u; i < iters; i++) {
+    folly::F14FastMap<std::string, std::string> t;
+    t.reserve(kData);
+    for (std::size_t j = 0; j < kData; j++) {
+      t[std::to_string(j)] = std::to_string(j);
+    }
+    for (std::size_t j = 0; j < kData; j++) {
+      auto found = t.find(std::to_string(j));
+      folly::doNotOptimizeAway(found);
+    }
+  }
+}
+
+BENCHMARK_RELATIVE(JoinHashTable_10k_string, iters) {
+  constexpr std::size_t kData = 10000;
+  for (auto i = 0u; i < iters; i++) {
+    JoinHashTable<std::string, std::string> t(kData);
+    for (std::size_t j = 0; j < kData; j++) {
+      t[std::to_string(j)] = std::to_string(j);
+    }
+    for (std::size_t j = 0; j < kData; j++) {
+      auto found = t.find(std::to_string(j));
+      folly::doNotOptimizeAway(found);
+    }
+  }
+}
+
+BENCHMARK_DRAW_LINE();
+
 BENCHMARK(std_10k_value_int, iters) {
   constexpr int64_t kData = 10000;
   for (auto i = 0u; i < iters; i++) {
