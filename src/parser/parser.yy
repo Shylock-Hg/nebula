@@ -258,6 +258,7 @@ using namespace nebula;
 %type <expr> query_unique_identifier_value
 %type <expr> match_path_pattern_expression
 %type <expr> parenthesized_expression
+%type <expr> pattern_comprehension_expression
 %type <argument_list> argument_list opt_argument_list
 %type <geo_shape> geo_shape_type
 %type <type> type_spec
@@ -409,6 +410,9 @@ using namespace nebula;
 %type <boolval> opt_if_exists
 %type <boolval> opt_with_properties
 %type <boolval> opt_ignore_existed_index
+
+%type <strval> opt_variable_assignment
+%type <expr>   opt_where_expression
 
 // Define precedence and associativity of tokens.
 // Associativity:
@@ -968,6 +972,36 @@ list_comprehension_expression
         auto *expr = ListComprehensionExpression::make(qctx->objPool(), innerVar, $4, $6, $8);
         nebula::graph::ParserUtil::rewriteLC(qctx, expr, innerVar);
         $$ = expr;
+    }
+    ;
+
+pattern_comprehension_expression
+    : L_BRACKET  opt_variable_assignment match_relationships_pattern opt_where_expression | PIPE expression_internal R_BRACKET {
+        if ($2->kind() != Expression::Kind::kLabel) {
+            throw nebula::GraphParser::syntax_error(@2, "The loop variable must be a label in list comprehension");
+        }
+        auto &innerVar = static_cast<const LabelExpression *>($2)->name();
+        auto *expr = ListComprehensionExpression::make(qctx->objPool(), innerVar, $4, $6, nullptr);
+        nebula::graph::ParserUtil::rewriteLC(qctx, expr, innerVar);
+        $$ = expr;
+    }
+    ;
+
+opt_variable_assignment
+    : %empty {
+        $$ = nullptr;
+    }
+    | name_label ASSIGN {
+        $$ = $1;
+    }
+    ;
+
+opt_where_expression
+    : %empty {
+        $$ = nullptr;        
+    }
+    | KW_WHERE expression_internal {
+        $$ = $2;
     }
     ;
 
