@@ -129,6 +129,115 @@ void PrunePropertiesVisitor::visitCurrent(Aggregate *node) {
   }
 }
 
+void PrunePropertiesVisitor::visit(ScanVertices *node) {
+  visitCurrent(node);
+  status_ = depsPruneProperties(node->dependencies());
+}
+
+void PrunePropertiesVisitor::visitCurrent(ScanVertices *node) {
+  if (rootNode_) {
+    rootNode_ = false;
+    return;
+  }
+  auto &colNames = node->colNames();
+  DCHECK(!colNames.empty());
+  auto &nodeAlias = colNames.back();
+  auto it = propsUsed_.colsSet.find(nodeAlias);
+  if (it != propsUsed_.colsSet.end()) {
+    // all properties are used
+    return;
+  }
+  if (node->filter() != nullptr) {
+    status_ = extractPropsFromExpr(node->filter(), nodeAlias);
+    if (!status_.ok()) {
+      return;
+    }
+  }
+  pruneCurrent(node);
+}
+
+void PrunePropertiesVisitor::pruneCurrent(ScanVertices *node) {
+  pruneVertexProps(node);
+}
+
+template <typename T, typename>
+void PrunePropertiesVisitor::pruneVertexProps(T *node) {
+  auto &colNames = node->colNames();
+  DCHECK(!colNames.empty());
+  auto &nodeAlias = colNames.back();
+  auto *vertexProps = node->props();
+  if (vertexProps == nullptr) {
+    return;
+  }
+  auto prunedVertexProps = std::make_unique<std::vector<VertexProp>>();
+  auto &vertexPropsMap = propsUsed_.vertexPropsMap;
+  auto aliasIter = vertexPropsMap.find(nodeAlias);
+  if (aliasIter == vertexPropsMap.end()) {
+    if (FLAGS_optimize_appendvertices) {
+      node->setVertexProps(nullptr);
+    } else {
+      // only get _tag when props is nullptr
+      for (auto &vertexProp : *vertexProps) {
+        auto tagId = vertexProp.tag_ref().value();
+        VertexProp newVProp;
+        newVProp.tag_ref() = tagId;
+        newVProp.props_ref() = {nebula::kTag};
+        prunedVertexProps->emplace_back(std::move(newVProp));
+      }
+      node->setVertexProps(std::move(prunedVertexProps));
+    }
+    return;
+  }
+  auto &usedVertexProps = aliasIter->second;
+  if (usedVertexProps.empty()) {
+    if (FLAGS_optimize_appendvertices) {
+      node->setVertexProps(nullptr);
+    } else {
+      // only get _tag when props is nullptr
+      for (auto &vertexProp : *vertexProps) {
+        auto tagId = vertexProp.tag_ref().value();
+        VertexProp newVProp;
+        newVProp.tag_ref() = tagId;
+        newVProp.props_ref() = {nebula::kTag};
+        prunedVertexProps->emplace_back(std::move(newVProp));
+      }
+      node->setVertexProps(std::move(prunedVertexProps));
+    }
+    return;
+  }
+  auto unknowIter = usedVertexProps.find(unKnowType_);
+  prunedVertexProps->reserve(usedVertexProps.size());
+  for (auto &vertexProp : *vertexProps) {
+    auto tagId = vertexProp.tag_ref().value();
+    auto &props = vertexProp.props_ref().value();
+    auto tagIter = usedVertexProps.find(tagId);
+    std::unordered_set<std::string> usedProps;
+    if (unknowIter != usedVertexProps.end()) {
+      usedProps.insert(unknowIter->second.begin(), unknowIter->second.end());
+    }
+    if (tagIter != usedVertexProps.end()) {
+      usedProps.insert(tagIter->second.begin(), tagIter->second.end());
+    }
+    if (usedProps.empty()) {
+      continue;
+    }
+    std::vector<std::string> newProps;
+    for (auto &prop : props) {
+      if (usedProps.find(prop) != usedProps.end()) {
+        newProps.emplace_back(prop);
+      }
+    }
+    if (newProps.empty()) {
+      continue;
+    }
+    VertexProp newVProp;
+    newVProp.tag_ref() = tagId;
+    newVProp.props_ref() = std::move(newProps);
+    prunedVertexProps->emplace_back(std::move(newVProp));
+  }
+  node->setVertexProps(std::move(prunedVertexProps));
+}
+
 void PrunePropertiesVisitor::visit(ScanEdges *node) {
   rootNode_ = false;
   pruneCurrent(node);
@@ -343,80 +452,7 @@ void PrunePropertiesVisitor::visitCurrent(AppendVertices *node) {
 }
 
 void PrunePropertiesVisitor::pruneCurrent(AppendVertices *node) {
-  auto &colNames = node->colNames();
-  DCHECK(!colNames.empty());
-  auto &nodeAlias = colNames.back();
-  auto *vertexProps = node->props();
-  if (vertexProps == nullptr) {
-    return;
-  }
-  auto prunedVertexProps = std::make_unique<std::vector<VertexProp>>();
-  auto &vertexPropsMap = propsUsed_.vertexPropsMap;
-  auto aliasIter = vertexPropsMap.find(nodeAlias);
-  if (aliasIter == vertexPropsMap.end()) {
-    if (FLAGS_optimize_appendvertices) {
-      node->setVertexProps(nullptr);
-    } else {
-      // only get _tag when props is nullptr
-      for (auto &vertexProp : *vertexProps) {
-        auto tagId = vertexProp.tag_ref().value();
-        VertexProp newVProp;
-        newVProp.tag_ref() = tagId;
-        newVProp.props_ref() = {nebula::kTag};
-        prunedVertexProps->emplace_back(std::move(newVProp));
-      }
-      node->setVertexProps(std::move(prunedVertexProps));
-    }
-    return;
-  }
-  auto &usedVertexProps = aliasIter->second;
-  if (usedVertexProps.empty()) {
-    if (FLAGS_optimize_appendvertices) {
-      node->setVertexProps(nullptr);
-    } else {
-      // only get _tag when props is nullptr
-      for (auto &vertexProp : *vertexProps) {
-        auto tagId = vertexProp.tag_ref().value();
-        VertexProp newVProp;
-        newVProp.tag_ref() = tagId;
-        newVProp.props_ref() = {nebula::kTag};
-        prunedVertexProps->emplace_back(std::move(newVProp));
-      }
-      node->setVertexProps(std::move(prunedVertexProps));
-    }
-    return;
-  }
-  auto unknowIter = usedVertexProps.find(unKnowType_);
-  prunedVertexProps->reserve(usedVertexProps.size());
-  for (auto &vertexProp : *vertexProps) {
-    auto tagId = vertexProp.tag_ref().value();
-    auto &props = vertexProp.props_ref().value();
-    auto tagIter = usedVertexProps.find(tagId);
-    std::unordered_set<std::string> usedProps;
-    if (unknowIter != usedVertexProps.end()) {
-      usedProps.insert(unknowIter->second.begin(), unknowIter->second.end());
-    }
-    if (tagIter != usedVertexProps.end()) {
-      usedProps.insert(tagIter->second.begin(), tagIter->second.end());
-    }
-    if (usedProps.empty()) {
-      continue;
-    }
-    std::vector<std::string> newProps;
-    for (auto &prop : props) {
-      if (usedProps.find(prop) != usedProps.end()) {
-        newProps.emplace_back(prop);
-      }
-    }
-    if (newProps.empty()) {
-      continue;
-    }
-    VertexProp newVProp;
-    newVProp.tag_ref() = tagId;
-    newVProp.props_ref() = std::move(newProps);
-    prunedVertexProps->emplace_back(std::move(newVProp));
-  }
-  node->setVertexProps(std::move(prunedVertexProps));
+  pruneVertexProps(node);
 }
 
 void PrunePropertiesVisitor::visit(BiJoin *node) {

@@ -55,7 +55,7 @@ StatusOr<SubPlan> ScanSeek::transformNode(NodeContext *nodeCtx) {
   SubPlan plan;
   auto *qctx = nodeCtx->qctx;
   auto *pool = qctx->objPool();
-  auto anyLabel = nodeCtx->scanInfo.anyLabel;
+  // auto anyLabel = nodeCtx->scanInfo.anyLabel;
 
   auto vProps = std::make_unique<std::vector<storage::cpp2::VertexProp>>();
   std::vector<std::string> colNames{kVid};
@@ -74,27 +74,27 @@ StatusOr<SubPlan> ScanSeek::transformNode(NodeContext *nodeCtx) {
   plan.tail = scanVertices;
 
   // Filter vertices lack labels
-  Expression *prev = nullptr;
-  for (const auto &tag : nodeCtx->scanInfo.schemaNames) {
-    auto *tagPropExpr = TagPropertyExpression::make(pool, tag, kTag);
-    auto *notEmpty = UnaryExpression::makeIsNotEmpty(pool, tagPropExpr);
-    if (prev != nullptr) {
-      if (anyLabel) {
-        auto *orExpr = LogicalExpression::makeOr(pool, prev, notEmpty);
-        prev = orExpr;
-      } else {
-        auto *andExpr = LogicalExpression::makeAnd(pool, prev, notEmpty);
-        prev = andExpr;
-      }
-    } else {
-      prev = notEmpty;
-    }
-  }
-  if (prev != nullptr) {
-    // prev equals to nullptr happend when there are no tags in whole space
-    auto *filter = Filter::make(qctx, scanVertices, prev);
-    plan.root = filter;
-  }
+  // Expression *prev = nullptr;
+  // for (const auto &tag : nodeCtx->scanInfo.schemaNames) {
+  // auto *tagPropExpr = TagPropertyExpression::make(pool, tag, kTag);
+  // auto *notEmpty = UnaryExpression::makeIsNotEmpty(pool, tagPropExpr);
+  // if (prev != nullptr) {
+  // if (anyLabel) {
+  // auto *orExpr = LogicalExpression::makeOr(pool, prev, notEmpty);
+  // prev = orExpr;
+  // } else {
+  // auto *andExpr = LogicalExpression::makeAnd(pool, prev, notEmpty);
+  // prev = andExpr;
+  // }
+  // } else {
+  // prev = notEmpty;
+  // }
+  // }
+  // if (prev != nullptr) {
+  // // prev equals to nullptr happend when there are no tags in whole space
+  // auto *filter = Filter::make(qctx, scanVertices, prev);
+  // plan.root = filter;
+  // }
 
   nodeCtx->initialExpr = InputPropertyExpression::make(pool, kVid);
   return plan;

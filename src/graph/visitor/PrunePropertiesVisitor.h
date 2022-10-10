@@ -6,6 +6,8 @@
 #ifndef GRAPH_VISITOR_PRUNEPROPERTIES_VISITOR_H_
 #define GRAPH_VISITOR_PRUNEPROPERTIES_VISITOR_H_
 
+#include <type_traits>
+
 #include "graph/planner/plan/PlanNode.h"
 #include "graph/planner/plan/PlanNodeVisitor.h"
 #include "graph/planner/plan/Query.h"
@@ -54,6 +56,15 @@ class PrunePropertiesVisitor final : public PlanNodeVisitor {
   void visitCurrent(Traverse *node);
   // prune properties in Traverse according to the used properties collected previous
   void pruneCurrent(Traverse *node);
+
+  void visit(ScanVertices *node) override;
+
+  void visitCurrent(ScanVertices *node);
+
+  void pruneCurrent(ScanVertices *node);
+
+  template <typename T, typename = std::enable_if_t<std::is_base_of_v<PlanNode, T>>>
+  void pruneVertexProps(T *node);
 
   void visit(ScanEdges *node) override;
 
