@@ -7,8 +7,14 @@
 #define COMMON_EXPRESSION_LISTCOMPREHENSIONEXPRESSION_H_
 
 #include "common/expression/Expression.h"
+#include "common/expression/InnerVariableUtil.h"
+#include "graph/context/QueryContext.h"
 
 namespace nebula {
+
+namespace graph {
+  class QueryContext;
+}
 
 class ListComprehensionExpression final : public Expression {
   friend class Expression;
@@ -17,14 +23,11 @@ class ListComprehensionExpression final : public Expression {
   ListComprehensionExpression& operator=(const ListComprehensionExpression& rhs) = delete;
   ListComprehensionExpression& operator=(ListComprehensionExpression&&) = delete;
 
-  static ListComprehensionExpression* make(ObjectPool* pool,
+  static ListComprehensionExpression* make(graph::QueryContext* qctx,
                                            const std::string& innerVar = "",
                                            Expression* collection = nullptr,
                                            Expression* filter = nullptr,
-                                           Expression* mapping = nullptr) {
-    return pool->makeAndAdd<ListComprehensionExpression>(
-        pool, innerVar, collection, filter, mapping);
-  }
+                                           Expression* mapping = nullptr);
 
   bool operator==(const Expression& rhs) const override;
 
@@ -102,6 +105,7 @@ class ListComprehensionExpression final : public Expression {
 
  private:
   friend ObjectPool;
+  friend Expression;
   explicit ListComprehensionExpression(ObjectPool* pool,
                                        const std::string& innerVar = "",
                                        Expression* collection = nullptr,

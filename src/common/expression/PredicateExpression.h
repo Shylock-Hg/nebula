@@ -8,8 +8,13 @@
 
 #include "common/datatypes/Map.h"
 #include "common/expression/Expression.h"
+#include "common/expression/InnerVariableUtil.h"
 
 namespace nebula {
+
+namespace graph {
+  class QueryContext;
+}
 
 class PredicateExpression final : public Expression {
   friend class Expression;
@@ -25,13 +30,11 @@ class PredicateExpression final : public Expression {
   PredicateExpression& operator=(const PredicateExpression& rhs) = delete;
   PredicateExpression& operator=(PredicateExpression&&) = delete;
 
-  static PredicateExpression* make(ObjectPool* pool,
+  static PredicateExpression* make(graph::QueryContext* qctx,
                                    const std::string& name = "",
                                    const std::string& innerVar = "",
                                    Expression* collection = nullptr,
-                                   Expression* filter = nullptr) {
-    return pool->makeAndAdd<PredicateExpression>(pool, name, innerVar, collection, filter);
-  }
+                                   Expression* filter = nullptr);
 
   bool operator==(const Expression& rhs) const override;
 
@@ -101,6 +104,7 @@ class PredicateExpression final : public Expression {
 
  private:
   friend ObjectPool;
+  friend Expression;
   explicit PredicateExpression(ObjectPool* pool,
                                const std::string& name = "",
                                const std::string& innerVar = "",

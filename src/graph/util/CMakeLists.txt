@@ -11,7 +11,6 @@ nebula_add_library(
     FTIndexUtils.cpp
     ZoneUtil.cpp
     ToJson.cpp
-    ParserUtil.cpp
     PlannerUtil.cpp
     ValidateUtil.cpp
 )

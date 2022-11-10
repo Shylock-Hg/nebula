@@ -498,17 +498,17 @@ Expression* Expression::decode(ObjectPool* pool, Expression::Decoder& decoder) {
       return exp;
     }
     case Expression::Kind::kListComprehension: {
-      exp = ListComprehensionExpression::make(pool);
+      exp = pool->makeAndAdd<ListComprehensionExpression>(pool);
       exp->resetFrom(decoder);
       return exp;
     }
     case Expression::Kind::kPredicate: {
-      exp = PredicateExpression::make(pool);
+      exp = pool->makeAndAdd<PredicateExpression>(pool);
       exp->resetFrom(decoder);
       return exp;
     }
     case Expression::Kind::kReduce: {
-      exp = ReduceExpression::make(pool);
+      exp = pool->makeAndAdd<ReduceExpression>(pool);
       exp->resetFrom(decoder);
       return exp;
     }

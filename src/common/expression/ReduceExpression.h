@@ -7,22 +7,24 @@
 #define COMMON_EXPRESSION_REDUCEEXPRESSIONEXPRESSION_H_
 
 #include "common/expression/Expression.h"
+#include "common/expression/InnerVariableUtil.h"
 
 namespace nebula {
+
+namespace graph {
+  class QueryContext;
+}
 
 class ReduceExpression final : public Expression {
   friend class Expression;
 
  public:
-  static ReduceExpression* make(ObjectPool* pool,
+  static ReduceExpression* make(graph::QueryContext* qctx,
                                 const std::string& accumulator = "",
                                 Expression* initial = nullptr,
                                 const std::string& innerVar = "",
                                 Expression* collection = nullptr,
-                                Expression* mapping = nullptr) {
-    return pool->makeAndAdd<ReduceExpression>(
-        pool, accumulator, initial, innerVar, collection, mapping);
-  }
+                                Expression* mapping = nullptr);
 
   bool operator==(const Expression& rhs) const override;
 
@@ -100,6 +102,7 @@ class ReduceExpression final : public Expression {
 
  private:
   friend ObjectPool;
+  friend Expression;
   explicit ReduceExpression(ObjectPool* pool,
                             const std::string& accumulator = "",
                             Expression* initial = nullptr,

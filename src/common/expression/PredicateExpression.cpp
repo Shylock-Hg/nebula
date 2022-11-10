@@ -7,7 +7,18 @@
 
 #include "common/expression/ExprVisitor.h"
 
+#include "graph/context/QueryContext.h"
+
 namespace nebula {
+
+static PredicateExpression* PredicateExpression::make(graph::QueryContext* qctx,
+                                  const std::string& name = "",
+                                  const std::string& innerVar = "",
+                                  Expression* collection = nullptr,
+                                  Expression* filter = nullptr) {
+  auto expr = qctx->objPool()->makeAndAdd<PredicateExpression>(qctx->objPool(), name, innerVar, collection, filter);
+  return InnerVariableUtil::rewritePred(qctx, expr, innerVar);
+}
 
 std::unordered_map<std::string, PredicateExpression::Type> PredicateExpression::typeMap_ = {
     {"all", Type::ALL},

@@ -7,7 +7,20 @@
 
 #include "common/expression/ExprVisitor.h"
 
+#include "graph/context/QueryContext.h"
+
 namespace nebula {
+
+static ReduceExpression* ReduceExpression::make(graph::QueryContext* qctx,
+                              const std::string& accumulator = "",
+                              Expression* initial = nullptr,
+                              const std::string& innerVar = "",
+                              Expression* collection = nullptr,
+                              Expression* mapping = nullptr) {
+  auto expr = qctx->objPool()->makeAndAdd<ReduceExpression>(
+      qctx->objPool(), accumulator, initial, innerVar, collection, mapping);
+  return InnerVariableUtil::rewriteReduce(qctx, expr, accumulator, innerVar);
+}
 
 const Value& ReduceExpression::eval(ExpressionContext& ctx) {
   auto& initVal = initial_->eval(ctx);

@@ -6,8 +6,19 @@
 #include "common/expression/ListComprehensionExpression.h"
 
 #include "common/expression/ExprVisitor.h"
+#include "graph/context/QueryContext.h"
 
 namespace nebula {
+
+static ListComprehensionExpression* ListComprehensionExpression::make(graph::QueryContext* qctx,
+                                          const std::string& innerVar = "",
+                                          Expression* collection = nullptr,
+                                          Expression* filter = nullptr,
+                                          Expression* mapping = nullptr) {
+  auto expr = qctx->objPool()->makeAndAdd<ListComprehensionExpression>(
+      qctx->objPool(), innerVar, collection, filter, mapping);
+  return InnerVariableUtil::rewriteLC(qctx, expr, innerVar);
+}
 
 const Value& ListComprehensionExpression::eval(ExpressionContext& ctx) {
   List ret;

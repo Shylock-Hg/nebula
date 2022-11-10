@@ -2,17 +2,21 @@
 //
 // This source code is licensed under Apache 2.0 License.
 
-#include "graph/util/ParserUtil.h"
+#include "common/expression/InnerVariableUtil.h"
 
 #include "common/base/ObjectPool.h"
 #include "common/base/Status.h"
 #include "common/base/StatusOr.h"
+#include "common/expression/ListComprehensionExpression.h"
+#include "common/expression/ReduceExpression.h"
+#include "common/expression/PredicateExpression.h"
+
+#include "graph/context/QueryContext.h"
 
 namespace nebula {
-namespace graph {
 
 // static
-void ParserUtil::rewriteLC(QueryContext *qctx,
+void InnerVariableUtil::rewriteLC(graph::QueryContext *qctx,
                            ListComprehensionExpression *lc,
                            const std::string &oldVarName) {
   // The inner variable will be same with other inner variable in other expression,
@@ -83,7 +87,7 @@ void ParserUtil::rewriteLC(QueryContext *qctx,
 }
 
 // static
-void ParserUtil::rewritePred(QueryContext *qctx,
+void InnerVariableUtil::rewritePred(graph::QueryContext *qctx,
                              PredicateExpression *pred,
                              const std::string &oldVarName) {
   const auto &newVarName = qctx->vctx()->anonVarGen()->getVar();
@@ -128,7 +132,7 @@ void ParserUtil::rewritePred(QueryContext *qctx,
 }
 
 // static
-void ParserUtil::rewriteReduce(QueryContext *qctx,
+void InnerVariableUtil::rewriteReduce(graph::QueryContext *qctx,
                                ReduceExpression *reduce,
                                const std::string &oldAccName,
                                const std::string &oldVarName) {
@@ -182,5 +186,4 @@ void ParserUtil::rewriteReduce(QueryContext *qctx,
   reduce->setMapping(newMapping);
 }
 
-}  // namespace graph
 }  // namespace nebula

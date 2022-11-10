@@ -32,6 +32,7 @@ nebula_add_library(
     ListComprehensionExpression.cpp
     ReduceExpression.cpp
     MatchPathPatternExpression.cpp
+    InnerVariableUtil.cpp
 )
 
 nebula_add_subdirectory(test)

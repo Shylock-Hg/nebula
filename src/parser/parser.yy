@@ -31,7 +31,6 @@
 #include "common/expression/AggregateExpression.h"
 #include "common/function/FunctionManager.h"
 #include "common/expression/ReduceExpression.h"
-#include "graph/util/ParserUtil.h"
 #include "graph/util/ExpressionUtils.h"
 #include "graph/context/QueryContext.h"
 #include "graph/util/SchemaUtil.h"
@@ -930,8 +929,7 @@ predicate_expression
             throw nebula::GraphParser::syntax_error(@3, "The loop variable must be a label in predicate functions");
         }
         std::string innerVar = static_cast<const LabelExpression *>($3)->name();
-        auto *expr = PredicateExpression::make(qctx->objPool(), *$1, innerVar, $5, $7);  // TODO(jie) Use std::unique_ptr<std::string>
-        nebula::graph::ParserUtil::rewritePred(qctx, expr, innerVar);
+        auto *expr = PredicateExpression::make(qctx, *$1, innerVar, $5, $7);  // TODO(jie) Use std::unique_ptr<std::string>
         $$ = expr;
         delete $1;
     }
@@ -950,8 +948,7 @@ list_comprehension_expression
             throw nebula::GraphParser::syntax_error(@2, "The loop variable must be a label in list comprehension");
         }
         auto &innerVar = static_cast<const LabelExpression *>($2)->name();
-        auto *expr = ListComprehensionExpression::make(qctx->objPool(), innerVar, $4, $6, nullptr);
-        nebula::graph::ParserUtil::rewriteLC(qctx, expr, innerVar);
+        auto *expr = ListComprehensionExpression::make(qctx, innerVar, $4, $6, nullptr);
         $$ = expr;
     }
     | L_BRACKET expression_internal KW_IN expression_internal PIPE expression_internal R_BRACKET {
@@ -959,8 +956,7 @@ list_comprehension_expression
             throw nebula::GraphParser::syntax_error(@2, "The loop variable must be a label in list comprehension");
         }
         auto &innerVar = static_cast<const LabelExpression *>($2)->name();
-        auto *expr = ListComprehensionExpression::make(qctx->objPool(), innerVar, $4, nullptr, $6);
-        nebula::graph::ParserUtil::rewriteLC(qctx, expr, innerVar);
+        auto *expr = ListComprehensionExpression::make(qctx, innerVar, $4, nullptr, $6);
         $$ = expr;
     }
     | L_BRACKET expression_internal KW_IN expression_internal KW_WHERE expression_internal PIPE expression_internal R_BRACKET {
@@ -968,16 +964,14 @@ list_comprehension_expression
             throw nebula::GraphParser::syntax_error(@2, "The loop variable must be a label in list comprehension");
         }
         auto &innerVar = static_cast<const LabelExpression *>($2)->name();
-        auto *expr = ListComprehensionExpression::make(qctx->objPool(), innerVar, $4, $6, $8);
-        nebula::graph::ParserUtil::rewriteLC(qctx, expr, innerVar);
+        auto *expr = ListComprehensionExpression::make(qctx, innerVar, $4, $6, $8);
         $$ = expr;
     }
     ;
 
 reduce_expression
     : KW_REDUCE L_PAREN name_label ASSIGN expression_internal COMMA name_label KW_IN expression_internal PIPE expression_internal R_PAREN {
-        auto *expr = ReduceExpression::make(qctx->objPool(), *$3, $5, *$7, $9, $11);
-        nebula::graph::ParserUtil::rewriteReduce(qctx, expr, *$3, *$7);
+        auto *expr = ReduceExpression::make(qctx, *$3, $5, *$7, $9, $11);
         $$ = expr;
         delete $3;
         delete $7;
