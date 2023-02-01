@@ -45,6 +45,7 @@ set(expression_test_common_libs
     $<TARGET_OBJECTS:idgenerator_obj>
     $<TARGET_OBJECTS:graph_obj>
     $<TARGET_OBJECTS:ssl_obj>
+    $<TARGET_OBJECTS:observer_obj>
     $<TARGET_OBJECTS:memory_obj>
     $<TARGET_OBJECTS:gc_obj>
     $<TARGET_OBJECTS:http_client_obj>

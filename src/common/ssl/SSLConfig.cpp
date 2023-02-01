@@ -5,6 +5,11 @@
 
 #include "common/ssl/SSLConfig.h"
 
+#include <folly/experimental/observer/SimpleObservable.h>
+#include <wangle/ssl/SSLContextConfig.h>
+
+#include "common/observer/FileModifyObserver.h"
+
 DEFINE_string(cert_path, "", "Path to cert pem.");
 DEFINE_string(key_path, "", "Path to cert key.");
 DEFINE_string(password_path, "", "Path to password.");
@@ -15,7 +20,19 @@ DEFINE_bool(enable_meta_ssl, false, "Whether to enable ssl of meta server.");
 
 namespace nebula {
 
-std::shared_ptr<wangle::SSLContextConfig> sslContextConfig() {
+void SSLConfig::init() {
+  sslConfigOb_.setValue(sslContextConfig());
+  t_ = std::thread([this]() {
+    FileModifyObserver observer({FLAGS_cert_path});
+    while (!stop_.load()) {
+      if (observer.modified()) {
+        sslConfigOb_.setValue(sslContextConfig());
+      }
+    }
+  });
+}
+
+std::shared_ptr<wangle::SSLContextConfig> SSLConfig::sslContextConfig() {
   auto sslCfg = std::make_shared<wangle::SSLContextConfig>();
   sslCfg->addCertificate(FLAGS_cert_path, FLAGS_key_path, FLAGS_password_path);
   sslCfg->clientVerification = folly::SSLContext::VerifyClientCertificate::DO_NOT_REQUEST;
@@ -23,7 +40,7 @@ std::shared_ptr<wangle::SSLContextConfig> sslContextConfig() {
   return sslCfg;
 }
 
-std::shared_ptr<folly::SSLContext> createSSLContext() {
+std::shared_ptr<folly::SSLContext> SSLConfig::createSSLContext() {
   auto context = std::make_shared<folly::SSLContext>();
   if (!FLAGS_ca_path.empty()) {
     context->loadTrustedCertificates(FLAGS_ca_path.c_str());

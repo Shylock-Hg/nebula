@@ -41,6 +41,7 @@ SET(CONTEXT_TEST_LIBS
     $<TARGET_OBJECTS:plan_obj>
     $<TARGET_OBJECTS:idgenerator_obj>
     $<TARGET_OBJECTS:ssl_obj>
+    $<TARGET_OBJECTS:observer_obj>
     $<TARGET_OBJECTS:memory_obj>
     $<TARGET_OBJECTS:stats_obj>
     $<TARGET_OBJECTS:graph_stats_obj>

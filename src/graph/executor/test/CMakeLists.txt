@@ -53,6 +53,7 @@ SET(EXEC_QUERY_TEST_OBJS
     $<TARGET_OBJECTS:expr_visitor_obj>
     $<TARGET_OBJECTS:graph_obj>
     $<TARGET_OBJECTS:ssl_obj>
+    $<TARGET_OBJECTS:observer_obj>
     $<TARGET_OBJECTS:version_obj>
     $<TARGET_OBJECTS:graph_stats_obj>
     $<TARGET_OBJECTS:meta_client_stats_obj>

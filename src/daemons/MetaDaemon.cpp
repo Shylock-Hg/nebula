@@ -198,12 +198,17 @@ int main(int argc, char* argv[]) {
       return EXIT_FAILURE;
     }
   }
+
+  // ssl observer
+  nebula::SSLConfig sslConfig;
+
   try {
     metaServer->setPort(FLAGS_port);
     metaServer->setIdleTimeout(std::chrono::seconds(0));  // No idle timeout on client connection
     metaServer->setInterface(std::move(handler));
     if (FLAGS_enable_ssl || FLAGS_enable_meta_ssl) {
-      metaServer->setSSLConfig(nebula::sslContextConfig());
+      sslConfig.init();
+      metaServer->setSSLConfig(sslConfig.getObserver());
     }
     metaServer->serve();  // Will wait until the server shuts down
     waitForStop();

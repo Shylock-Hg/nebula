@@ -126,6 +126,9 @@ class StorageServer final {
   std::condition_variable cvStop_;
 
   std::unique_ptr<thread::GenericWorker> memoryMonitorThread_;
+
+  // certs observer
+  SSLConfig sslConfig_;
 };
 
 }  // namespace storage

@@ -43,6 +43,7 @@ set(CODEC_TEST_LIBS
     $<TARGET_OBJECTS:datetime_parser_obj>
     $<TARGET_OBJECTS:version_obj>
     $<TARGET_OBJECTS:ssl_obj>
+    $<TARGET_OBJECTS:observer_obj>
 )
 
 

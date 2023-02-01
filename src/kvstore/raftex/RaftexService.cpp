@@ -9,7 +9,6 @@
 
 #include "common/base/Base.h"
 #include "common/base/ErrorOr.h"
-#include "common/ssl/SSLConfig.h"
 #include "kvstore/raftex/RaftPart.h"
 
 namespace nebula {
@@ -37,7 +36,8 @@ std::shared_ptr<RaftexService> RaftexService::createService(
           std::dynamic_pointer_cast<apache::thrift::concurrency::ThreadManager>(workers));
     }
     if (FLAGS_enable_ssl) {
-      server->setSSLConfig(nebula::sslContextConfig());
+      svc->sslConfig_.init();
+      server->setSSLConfig(svc->sslConfig_.getObserver());
     }
     server->setInterface(svc);
     server->setup();

@@ -9,7 +9,6 @@
 
 #include "common/id/Snowflake.h"
 #include "graph/service/GraphFlags.h"
-#include "graph/service/GraphService.h"
 namespace nebula {
 namespace graph {
 
@@ -54,7 +53,8 @@ bool GraphServer::start() {
     thriftServer_->setNumAcceptThreads(FLAGS_num_accept_threads);
     thriftServer_->setListenBacklog(FLAGS_listen_backlog);
     if (FLAGS_enable_ssl || FLAGS_enable_graph_ssl) {
-      thriftServer_->setSSLConfig(nebula::sslContextConfig());
+      sslConfig_.init();
+      thriftServer_->setSSLConfig(sslConfig_.getObserver());
     }
     thriftServer_->setThreadManager(threadManager);
 

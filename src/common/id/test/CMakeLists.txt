@@ -12,6 +12,7 @@ nebula_add_executable(
       $<TARGET_OBJECTS:thrift_obj>
       $<TARGET_OBJECTS:meta_obj>
       $<TARGET_OBJECTS:ssl_obj>
+      $<TARGET_OBJECTS:observer_obj>
       $<TARGET_OBJECTS:conf_obj>
       $<TARGET_OBJECTS:ws_obj>
       $<TARGET_OBJECTS:ws_common_obj>
@@ -52,6 +53,7 @@ nebula_add_test(
     $<TARGET_OBJECTS:thrift_obj>
     $<TARGET_OBJECTS:meta_obj>
     $<TARGET_OBJECTS:ssl_obj>
+    $<TARGET_OBJECTS:observer_obj>
     $<TARGET_OBJECTS:conf_obj>
     $<TARGET_OBJECTS:ws_obj>
     $<TARGET_OBJECTS:ws_common_obj>

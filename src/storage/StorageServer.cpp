@@ -367,7 +367,8 @@ std::unique_ptr<apache::thrift::ThriftServer> StorageServer::getStorageServer() 
     server->setIOThreadPool(ioThreadPool_);
     server->setThreadManager(workers_);
     if (FLAGS_enable_ssl) {
-      server->setSSLConfig(nebula::sslContextConfig());
+      sslConfig_.init();
+      server->setSSLConfig(sslConfig_.getObserver());
     }
     server->setInterface(std::move(handler));
     server->setup();
@@ -400,7 +401,7 @@ std::unique_ptr<apache::thrift::ThriftServer> StorageServer::getAdminServer() {
     server->setIOThreadPool(ioThreadPool_);
     server->setThreadManager(workers_);
     if (FLAGS_enable_ssl) {
-      server->setSSLConfig(nebula::sslContextConfig());
+      server->setSSLConfig(SSLConfig::sslContextConfig());
     }
     server->setInterface(std::move(handler));
     server->setup();

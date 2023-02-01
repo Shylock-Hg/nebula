@@ -44,6 +44,7 @@ set(PARSER_TEST_LIBS
     $<TARGET_OBJECTS:idgenerator_obj>
     $<TARGET_OBJECTS:graph_obj>
     $<TARGET_OBJECTS:ssl_obj>
+    $<TARGET_OBJECTS:observer_obj>
     $<TARGET_OBJECTS:memory_obj>
     $<TARGET_OBJECTS:plan_obj>
     $<TARGET_OBJECTS:gc_obj>

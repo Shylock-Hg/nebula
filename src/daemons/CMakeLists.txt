@@ -33,6 +33,7 @@ set(common_deps
     $<TARGET_OBJECTS:datetime_parser_obj>
     $<TARGET_OBJECTS:version_obj>
     $<TARGET_OBJECTS:ssl_obj>
+    $<TARGET_OBJECTS:observer_obj>
     $<TARGET_OBJECTS:geo_index_obj>
     $<TARGET_OBJECTS:log_monitor_obj>
 )

@@ -11,6 +11,7 @@
 #include "common/base/Base.h"
 #include "common/base/SignalHandler.h"
 #include "common/network/NetworkUtils.h"
+#include "graph/service/GraphService.h"
 namespace nebula {
 namespace graph {
 class GraphServer {
@@ -41,6 +42,9 @@ class GraphServer {
   std::atomic<ServiceStatus> serverStatus_{STATUS_UNINITIALIZED};
   std::mutex muStop_;
   std::condition_variable cvStop_;
+
+  // ssl config observer
+  SSLConfig sslConfig_;
 };
 }  // namespace graph
 }  // namespace nebula

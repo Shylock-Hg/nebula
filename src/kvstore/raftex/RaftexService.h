@@ -10,6 +10,7 @@
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
 #include "common/base/Base.h"
+#include "common/ssl/SSLConfig.h"
 #include "interface/gen-cpp2/RaftexService.h"
 
 namespace nebula {
@@ -138,6 +139,9 @@ class RaftexService : public cpp2::RaftexServiceSvIf {
 
   folly::RWSpinLock partsLock_;
   std::unordered_map<std::pair<GraphSpaceID, PartitionID>, std::shared_ptr<RaftPart>> parts_;
+
+  // ssl observer
+  SSLConfig sslConfig_;
 };
 
 }  // namespace raftex

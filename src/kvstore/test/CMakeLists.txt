@@ -41,6 +41,7 @@ set(KVSTORE_TEST_LIBS
     $<TARGET_OBJECTS:es_adapter_obj>
     $<TARGET_OBJECTS:version_obj>
     $<TARGET_OBJECTS:ssl_obj>
+    $<TARGET_OBJECTS:observer_obj>
     $<TARGET_OBJECTS:storage_thrift_obj>
     $<TARGET_OBJECTS:geo_index_obj>
     $<TARGET_OBJECTS:stats_obj>

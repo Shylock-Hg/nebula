@@ -40,6 +40,7 @@ set(LISTENER_TEST_LIBS
     $<TARGET_OBJECTS:process_obj>
     $<TARGET_OBJECTS:version_obj>
     $<TARGET_OBJECTS:ssl_obj>
+    $<TARGET_OBJECTS:observer_obj>
     $<TARGET_OBJECTS:storage_thrift_obj>
     $<TARGET_OBJECTS:geo_index_obj>
     $<TARGET_OBJECTS:meta_client_stats_obj>
