@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include <cstring>
+#include <filesystem>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -22,7 +23,11 @@ class FileModifyObserver {
       throw std::runtime_error(folly::sformat("Failed to init inotify: {}.", strerror(errno)));
     }
     for (const auto &file : files) {
-      auto wd = ::inotify_add_watch(fd_, file.c_str(), IN_CLOSE_WRITE);
+      if (!std::filesystem::is_regular_file(file)) {
+        ::close(fd_);
+        throw std::runtime_error(folly::sformat("File `{}' is not a regular file.", file));
+      }
+      auto wd = ::inotify_add_watch(fd_, file.c_str(), IN_CLOSE_WRITE | IN_MODIFY);
       if (wd < 0) {
         ::close(fd_);
         throw std::runtime_error(

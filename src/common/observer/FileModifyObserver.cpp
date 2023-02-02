@@ -22,7 +22,7 @@ bool FileModifyObserver::modified() {
     struct inotify_event* event = reinterpret_cast<struct inotify_event*>(&inotifyBuffer[inotifyI]);
 
     // Check event
-    if (event->mask & IN_CLOSE_WRITE) {
+    if ((event->mask & IN_CLOSE_WRITE) || (event->mask & IN_MODIFY)) {
       if (event->mask & IN_ISDIR) {
         // Ignore directory change
       } else {
